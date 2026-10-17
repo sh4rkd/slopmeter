@@ -2,7 +2,7 @@ module github.com/Netskill89/slopmeter
 
 go 1.26
 
-require github.com/nuriland/a2kit v0.4.0
+require github.com/nuriland/a2kit v0.0.0-20261002141630-dbaebf78d0f1
 
 require (
 	github.com/0xrawsec/golang-etw v1.6.2 // indirect

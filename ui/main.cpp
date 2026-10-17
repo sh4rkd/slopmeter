@@ -536,7 +536,7 @@ int main(int argc,char **argv) {
         auto display=wl_display_connect(nullptr);if(!display) {fprintf(stderr,"A Wayland session is required.\n");return 1;}
         bool supported=false;auto registry=wl_display_get_registry(display);const wl_registry_listener listener{global,removed};
         wl_registry_add_listener(registry,&listener,&supported);wl_display_roundtrip(display);wl_registry_destroy(registry);wl_display_disconnect(display);
-        if(!supported) {fprintf(stderr,"Layer shell not available: using XWayland fallback.\n");g_noLayerShell=true;qputenv("QT_QPA_PLATFORM","xcb");} else qputenv("QT_QPA_PLATFORM","wayland");
+        if(!supported) {if(qEnvironmentVariableIntValue("SLOPMETER_X11_FALLBACK")!=1) {fprintf(stderr,"Wayland layer shell is required (set SLOPMETER_X11_FALLBACK=1 to try an XWayland fallback).\n");return 1;}fprintf(stderr,"Layer shell not available: using XWayland fallback.\n");g_noLayerShell=true;qputenv("QT_QPA_PLATFORM","xcb");} else qputenv("QT_QPA_PLATFORM","wayland");
     }
     qunsetenv("QT_WAYLAND_SHELL_INTEGRATION");
     QApplication app(argc,argv);app.setQuitOnLastWindowClosed(false);app.setOrganizationName("AionDPS");app.setApplicationName("SlopMeter");
