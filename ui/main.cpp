@@ -16,6 +16,7 @@
 #include <QMenu>
 #include <QPainter>
 #include <LayerShellQt/Window>
+static bool g_noLayerShell=false;
 #include <wayland-client.h>
 #include <cstdio>
 #include <cstring>
@@ -287,6 +288,11 @@ public:
     void resizeCanvas() {if(window) {window->resize(window->screen()->geometry().size());updateInputMask();}}
     void configureOverlay() {
         if(headless||!window) return;
+        if(g_noLayerShell) {
+            window->setFlags(Qt::Window|Qt::FramelessWindowHint|Qt::WindowStaysOnTopHint|Qt::Tool|Qt::WindowDoesNotAcceptFocus);
+            window->setPosition(window->screen()->geometry().topLeft());
+            return;
+        }
         auto layer=LayerShellQt::Window::get(window);
         layer->setLayer(LayerShellQt::Window::LayerOverlay);
         layer->setAnchors(LayerShellQt::Window::Anchors(LayerShellQt::Window::AnchorTop)|LayerShellQt::Window::AnchorBottom|LayerShellQt::Window::AnchorLeft|LayerShellQt::Window::AnchorRight);
@@ -306,7 +312,7 @@ public:
             window->hide();
             // LayerShellQt 6.3 attaches its integration to the platform handle only
             // at construction. Recreate that attachment after destroying the handle.
-            if(!headless) delete LayerShellQt::Window::get(window);
+            if(!headless&&!g_noLayerShell) delete LayerShellQt::Window::get(window);
             window->destroy();window->setScreen(screen);window->setPosition(screen->geometry().topLeft());resizeCanvas();
             configureOverlay();positionOverlay(pos);if(visible) window->show();
         }
@@ -530,7 +536,7 @@ int main(int argc,char **argv) {
         auto display=wl_display_connect(nullptr);if(!display) {fprintf(stderr,"A Wayland session is required.\n");return 1;}
         bool supported=false;auto registry=wl_display_get_registry(display);const wl_registry_listener listener{global,removed};
         wl_registry_add_listener(registry,&listener,&supported);wl_display_roundtrip(display);wl_registry_destroy(registry);wl_display_disconnect(display);
-        if(!supported) {fprintf(stderr,"Wayland layer shell is required.\n");return 1;}qputenv("QT_QPA_PLATFORM","wayland");
+        if(!supported) {fprintf(stderr,"Layer shell not available: using XWayland fallback.\n");g_noLayerShell=true;qputenv("QT_QPA_PLATFORM","xcb");} else qputenv("QT_QPA_PLATFORM","wayland");
     }
     qunsetenv("QT_WAYLAND_SHELL_INTEGRATION");
     QApplication app(argc,argv);app.setQuitOnLastWindowClosed(false);app.setOrganizationName("AionDPS");app.setApplicationName("SlopMeter");
