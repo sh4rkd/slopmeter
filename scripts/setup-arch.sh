@@ -5,9 +5,9 @@ set -euo pipefail
 cd "$(dirname "$0")/.."
 
 echo "==> Instalando dependencias (pacman)"
-sudo pacman -S --needed base-devel git go cmake pkgconf \
-  qt6-base qt6-declarative qt6-svg qt6-wayland layer-shell-qt wayland \
-  wireshark-cli polkit xorg-xwayland
+sudo pacman -S --needed base-devel git go libpcap cmake pkgconf \
+  qt6-base qt6-declarative qt6-svg qt6-imageformats qt6-wayland layer-shell-qt wayland \
+  nodejs python wireshark-cli polkit xorg-xwayland
 
 if [[ "${XDG_CURRENT_DESKTOP:-}" == *GNOME* ]]; then
   echo "==> GNOME: extensión de bandeja (AppIndicator)"
