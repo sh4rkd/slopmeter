@@ -105,6 +105,7 @@ class Bridge : public QObject {
     Q_PROPERTY(QString appVersion READ appVersion CONSTANT)
     Q_PROPERTY(int barStyle READ barStyle WRITE setBarStyle NOTIFY appearanceChanged)
     Q_PROPERTY(bool minimalistMode READ minimalistMode WRITE setMinimalistMode NOTIFY appearanceChanged)
+    Q_PROPERTY(bool minimalistCompactDamage READ minimalistCompactDamage WRITE setMinimalistCompactDamage NOTIFY appearanceChanged)
     Q_PROPERTY(bool growUp READ growUp WRITE setGrowUp NOTIFY appearanceChanged)
     Q_PROPERTY(bool showBorder READ showBorder WRITE setShowBorder NOTIFY appearanceChanged)
     Q_PROPERTY(QString captureInterface READ captureInterface WRITE setCaptureInterface NOTIFY interfacesChanged)
@@ -147,9 +148,12 @@ public:
     bool testMode() const {return previewEnabled;}
     int styleSetting=QSettings().value("appearance/barStyle",0).toInt();
     bool minimalistSetting=QSettings().value("appearance/minimalistMode",false).toBool();
+    bool minimalistCompactDamageSetting=QSettings().value("appearance/minimalistCompactDamage",true).toBool();
     bool growthSetting=QSettings().value("appearance/growUp",false).toBool();
     bool minimalistMode() const {return minimalistSetting;}
     void setMinimalistMode(bool value) {if(minimalistSetting==value) return;minimalistSetting=value;QSettings().setValue("appearance/minimalistMode",value);emit appearanceChanged();}
+    bool minimalistCompactDamage() const {return minimalistCompactDamageSetting;}
+    void setMinimalistCompactDamage(bool value) {if(minimalistCompactDamageSetting==value) return;minimalistCompactDamageSetting=value;QSettings().setValue("appearance/minimalistCompactDamage",value);emit appearanceChanged();}
     bool growUp() const {return growthSetting;}
     void setGrowUp(bool value) {growthSetting=value;QSettings().setValue("appearance/growUp",value);savePosition();emit appearanceChanged();}
     int barStyle() const {return qBound(0,styleSetting,3);}
@@ -257,13 +261,14 @@ public:
     void setBarHeight(int value) {heightSetting=qBound(28,value,80);QSettings().setValue("appearance/barHeight",heightSetting);emit appearanceChanged();}
     void setBarSpacing(int value) {spacingSetting=qBound(0,value,20);QSettings().setValue("appearance/barSpacing",spacingSetting);emit appearanceChanged();}
     void setShowDetails(bool value) {detailsSetting=value;QSettings().setValue("appearance/showDetails",value);emit appearanceChanged();}
-    Q_INVOKABLE void resetAppearance() {setMinimalistMode(false);setGrowUp(false);setScoreDisplay(1);setShowTotalDamage(true);setRoundedDps(false);setBarWidth(352);setBarHeight(44);setBarSpacing(4);setShowDetails(true);setBackgroundOpacity(75);setOverallOpacity(100);setShowBorder(true);setBarStyle(0);setPollInterval(200);}
+    Q_INVOKABLE void resetAppearance() {setMinimalistMode(false);setMinimalistCompactDamage(true);setGrowUp(false);setScoreDisplay(1);setShowTotalDamage(true);setRoundedDps(false);setBarWidth(352);setBarHeight(44);setBarSpacing(4);setShowDetails(true);setBackgroundOpacity(75);setOverallOpacity(100);setShowBorder(true);setBarStyle(0);setPollInterval(200);}
     ActorModel actors;
     SkillModel skills;
     QProcess process;
     QByteArray buffer;
     QJsonObject pending;
     QTimer publish;
+    QTimer x11RaiseTimer;
     QQuickWindow *window=nullptr;
     bool headless=false;
     QPoint dragOrigin;
@@ -298,8 +303,13 @@ public:
     void configureOverlay() {
         if(headless||!window) return;
         if(g_noLayerShell) {
-            window->setFlags(Qt::Window|Qt::FramelessWindowHint|Qt::WindowStaysOnTopHint|Qt::Tool|Qt::WindowDoesNotAcceptFocus);
+            window->setFlags(Qt::Window|Qt::FramelessWindowHint|Qt::WindowStaysOnTopHint|Qt::Tool|Qt::WindowDoesNotAcceptFocus|Qt::X11BypassWindowManagerHint);
             window->setPosition(window->screen()->geometry().topLeft());
+            if(!x11RaiseTimer.isActive()) {
+                x11RaiseTimer.setInterval(1000);
+                connect(&x11RaiseTimer,&QTimer::timeout,this,[this] {if(window&&window->isVisible()) window->raise();});
+                x11RaiseTimer.start();
+            }
             return;
         }
         auto layer=LayerShellQt::Window::get(window);
@@ -774,11 +784,20 @@ int main(int argc,char **argv) {
         QVariant formatted;QMetaObject::invokeMethod(window,"dpsText",Q_RETURN_ARG(QVariant,formatted),Q_ARG(QVariant,QVariant(12345.0)));
         if(!formatted.toString().endsWith("K")) {fprintf(stderr,"Rounded DPS formatting failed\n");app.exit(48);return;}
         auto minimalistToggle=settingsWindow->findChild<QObject*>("minimalistModeToggle");
-        if(!minimalistToggle||bridge.minimalistMode()) {app.exit(90);return;}
+        auto minimalistCompactToggle=settingsWindow->findChild<QQuickItem*>("minimalistCompactDamageToggle");
+        if(!minimalistToggle||!minimalistCompactToggle||minimalistCompactToggle->isVisible()||bridge.minimalistMode()||!bridge.minimalistCompactDamage()) {app.exit(90);return;}
         minimalistToggle->setProperty("checked",true);
-        if(!QMetaObject::invokeMethod(minimalistToggle,"toggled")||!bridge.minimalistMode()) {app.exit(90);return;}
+        if(!QMetaObject::invokeMethod(minimalistToggle,"toggled")||!bridge.minimalistMode()||!minimalistCompactToggle->isVisible()) {app.exit(90);return;}
         settle();
-        {Bridge restored;if(!restored.minimalistMode()) {app.exit(90);return;}}
+        {Bridge restored;if(!restored.minimalistMode()||!restored.minimalistCompactDamage()) {app.exit(90);return;}}
+        QVariant compactDmg,fullDmg;
+        QMetaObject::invokeMethod(window,"minimalistDamageText",Q_RETURN_ARG(QVariant,compactDmg),Q_ARG(QVariant,QVariant(1523.0)));
+        if(!compactDmg.toString().endsWith("K")) {app.exit(92);return;}
+        minimalistCompactToggle->setProperty("checked",false);
+        if(!QMetaObject::invokeMethod(minimalistCompactToggle,"toggled")||bridge.minimalistCompactDamage()) {app.exit(92);return;}
+        {Bridge restored;if(restored.minimalistCompactDamage()) {app.exit(92);return;}}
+        QMetaObject::invokeMethod(window,"minimalistDamageText",Q_RETURN_ARG(QVariant,fullDmg),Q_ARG(QVariant,QVariant(6741514.0)));
+        if(fullDmg.toString().endsWith("M")||fullDmg.toString().endsWith("K")) {app.exit(92);return;}
         QQuickItem *minStats=nullptr,*dmgFill=nullptr,*nameLbl=nullptr;
         QList<QQuickItem*> searchQueue{bars};
         while(!searchQueue.isEmpty()) {
@@ -790,7 +809,7 @@ int main(int argc,char **argv) {
         }
         if(!minStats||!minStats->isVisible()||!dmgFill||dmgFill->isVisible()||!nameLbl||nameLbl->property("color").value<QColor>().name().toLower()!="#5f8cff"||qAbs(bars->height()-(4*22+3*10))>1) {app.exit(91);return;}
         bridge.resetAppearance();settle();
-        if(bridge.minimalistMode()||bridge.scoreDisplay()!=1||!bridge.showTotalDamage()||bridge.roundedDps()) {app.exit(49);return;}
+        if(bridge.minimalistMode()||!bridge.minimalistCompactDamage()||bridge.scoreDisplay()!=1||!bridge.showTotalDamage()||bridge.roundedDps()) {app.exit(49);return;}
         if(bridge.backgroundOpacity()!=75||bridge.overallOpacity()!=100||qAbs(bridge.panel->height()-partyHeight)>1||window->mask()!=QRegion(QRectF(bridge.panel->x(),bridge.panel->y(),bridge.panel->width(),bridge.panel->height()).toAlignedRect())) {app.exit(27);return;}
         const auto previousCharacterName=bridge.characterName();
         bridge.setCharacterName("RememberedPlayer");

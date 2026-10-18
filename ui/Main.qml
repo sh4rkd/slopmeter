@@ -70,6 +70,14 @@ Window {
         if (rounded >= 1000) return (rounded / 1000).toLocaleString(Qt.locale(), 'f', 1) + "K"
         return number(rounded)
     }
+    function minimalistDamageText(value) {
+        const amount = Number(value || 0)
+        if (!backend.minimalistCompactDamage) return number(amount)
+        const rounded = Math.round(amount)
+        if (rounded >= 999950) return (rounded / 1000000).toLocaleString(Qt.locale(), 'f', 1) + "M"
+        if (rounded >= 1000) return (rounded / 1000).toLocaleString(Qt.locale(), 'f', 1) + "K"
+        return number(rounded)
+    }
     function classColor(name) {
         // Match A2Tools' jobColorMap; Elementalist is named Spiritmaster there.
         const colors = {Gladiator: "#4FD1C5", Templar: "#5F8CFF", Ranger: "#41D98A", Assassin: "#7BE35A",
@@ -311,7 +319,7 @@ Window {
                                 visible: backend.minimalistMode
                                 color: bar.textColor; font.pixelSize: 12; font.bold: true
                                 horizontalAlignment: Text.AlignRight
-                                text: (backend.showTotalDamage ? meter.number(bar.damage) + " · " : "") + meter.dpsText(bar.dps) + " DPS" + (backend.showDetails ? " (" + bar.share.toFixed(1) + "%)" : "")
+                                text: (backend.showTotalDamage ? meter.minimalistDamageText(bar.damage) + " · " : "") + meter.dpsText(bar.dps) + " DPS" + (backend.showDetails ? " (" + bar.share.toFixed(1) + "%)" : "")
                             }
                             ColumnLayout {
                                 visible: !backend.minimalistMode
