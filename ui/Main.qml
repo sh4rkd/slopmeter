@@ -27,6 +27,16 @@ Window {
         if (rounded >= 1000) return (rounded / 1000).toLocaleString(Qt.locale(), 'f', 1) + "K"
         return number(rounded)
     }
+    // Calculates the total DPS for the entire group by summing the DPS of each player.
+    // Returns 0 if there are no players or if DPS information is unavailable.
+    function getGroupDps() {
+        let total = 0
+        for (let i = 0; i < backend.displayPlayers.length; i++) {
+            total += backend.displayPlayers[i].dps || 0
+        }
+        return total
+    }
+
     function classColor(name) {
         // Match A2Tools' jobColorMap; Elementalist is named Spiritmaster there.
         const colors = {Gladiator: "#4FD1C5", Templar: "#5F8CFF", Ranger: "#41D98A", Assassin: "#7BE35A",
@@ -109,6 +119,31 @@ Window {
                         HoverHandler {id: targetHover}
                         ToolTip.visible: targetHover.hovered
                         ToolTip.text: (backend.boss.name || "Target") + (!backend.boss.known ? " · Waiting for captured HP" : !backend.boss.maxKnown ? " · Maximum HP not detected" : "")
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true; spacing: 6
+                        Label {
+                            text: "Est. Group TTK:"
+                            color: "#fff1eb"
+                            font.pixelSize: 11
+                            font.bold: true
+                        }
+                        Label {
+                            // Calculates estimated seconds to kill based on boss HP and group DPS.
+                            // Evaluates directly using the helper function getGroupDps() without the meter prefix.
+                            // If DPS is 0 or HP is unknown, it defaults to -1 (Unknown).
+                            property real groupDps: getGroupDps()
+                            property real secondsLeft: (backend.boss.hp && groupDps > 0) ? (backend.boss.hp / groupDps) : -1
+
+                            // Formats the text to 'mm:ss' if time is known, else 'Unknown'
+                            text: secondsLeft >= 0 ? meter.clock(secondsLeft) : "Unknown"
+                            // Color formatting based on requested time thresholds:
+                            // Red > 5 minutes (300 seconds), Yellow between 4 and 5 minutes (240-300 seconds), Green < 4 minutes (240 seconds).
+                            color: secondsLeft < 0 ? "#8e9eb5" : (secondsLeft > 300 ? "#ee6464" : (secondsLeft >= 240 ? "#f2c15a" : "#54cf82"))
+                            font.pixelSize: 11
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                        }
                     }
                 }
                 Label {
