@@ -25,15 +25,16 @@ Window {
             Label {text: "Remembers the last detected name. Captured character identity overrides it on relog; name-based matches are rechecked after a zone change."; color: "#9eadc3"; Layout.fillWidth: true; font.pixelSize: 11; wrapMode: Text.WordWrap}
             Label {text: "Layout"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
             CheckBox {objectName: "testModeToggle"; palette.windowText: "#e6edf6"; text: "Test mode"; checked: backend.testMode; onToggled: backend.testMode = checked}
+            CheckBox {objectName: "minimalistModeToggle"; palette.windowText: "#e6edf6"; text: "Minimalist mode (text-only, no bars)"; checked: backend.minimalistMode; onToggled: backend.minimalistMode = checked}
             CheckBox {objectName: "borderToggle"; palette.windowText: "#e6edf6"; text: "Show meter border"; checked: backend.showBorder; onToggled: backend.showBorder = checked}
             Label {text: "Bar growth"; color: "#c0cbdc"}
             ComboBox {objectName: "barGrowthSelector"; Layout.fillWidth: true; model: ["Down · keep top edge fixed", "Up · keep bottom edge fixed"]; currentIndex: backend.growUp ? 1 : 0; onActivated: backend.growUp = currentIndex === 1}
-            Label {text: "Player bar style"; color: "#c0cbdc"}
-            ComboBox {objectName: "barStyleSelector"; Layout.fillWidth: true; model: ["Classic (default)", "Soft gradient", "Inset shadow", "Glossy"]; currentIndex: backend.barStyle; onActivated: backend.barStyle = currentIndex}
+            Label {text: "Player bar style"; color: "#c0cbdc"; enabled: !backend.minimalistMode}
+            ComboBox {objectName: "barStyleSelector"; Layout.fillWidth: true; enabled: !backend.minimalistMode; model: ["Classic (default)", "Soft gradient", "Inset shadow", "Glossy"]; currentIndex: backend.barStyle; onActivated: backend.barStyle = currentIndex}
             Label {text: "Width · " + backend.barWidth + " px"; color: "#c0cbdc"}
             Slider {objectName: "barWidthSlider"; Layout.fillWidth: true; from: 240; to: 720; stepSize: 8; value: backend.barWidth; onMoved: backend.barWidth = Math.round(value)}
-            Label {text: "Height · " + backend.barHeight + " px"; color: "#c0cbdc"}
-            Slider {objectName: "barHeightSlider"; Layout.fillWidth: true; from: 28; to: 80; stepSize: 2; value: backend.barHeight; onMoved: backend.barHeight = Math.round(value)}
+            Label {text: "Height · " + backend.barHeight + " px"; color: "#c0cbdc"; enabled: !backend.minimalistMode}
+            Slider {objectName: "barHeightSlider"; Layout.fillWidth: true; enabled: !backend.minimalistMode; from: 28; to: 80; stepSize: 2; value: backend.barHeight; onMoved: backend.barHeight = Math.round(value)}
             Label {text: "Vertical spacing · " + backend.barSpacing + " px"; color: "#c0cbdc"}
             Slider {objectName: "barSpacingSlider"; Layout.fillWidth: true; from: 0; to: 20; stepSize: 1; value: backend.barSpacing; onMoved: backend.barSpacing = Math.round(value)}
             Label {text: "Player bar information"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}

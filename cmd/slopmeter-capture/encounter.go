@@ -36,10 +36,10 @@ var bossCatalog = func() map[uint32]bossDefinition {
 }()
 
 type npcState struct {
-	definition bossDefinition
-	hp, max    uint32
-	known      bool
-	observed   time.Time
+	definition   bossDefinition
+	hp, max, peak uint32
+	known        bool
+	observed     time.Time
 }
 const bossTimeLimitSeconds = 300.0
 
@@ -290,31 +290,58 @@ func (e *encounter) targetState(id game.Entity) *npcState {
 	}
 	return n
 }
-func (e *encounter) health(t time.Time, id game.Entity, current, max uint32) {
+func (e *encounter) health(t time.Time, id game.Entity, current, maxHP uint32) {
 	n := e.targetState(id)
 	if t.Before(n.observed) {
-		if n.max == 0 && max > 0 {
-			n.max = max
+		if n.max == 0 && maxHP > 0 {
+			n.max = maxHP
 			e.metadataRevision++
+		}
+		if current > n.peak {
+			n.peak = current
+		}
+		if maxHP > n.peak {
+			n.peak = maxHP
 		}
 		return
 	}
-	if !n.known || n.hp != current || max > 0 && n.max != max {
+	if !n.known || n.hp != current || maxHP > 0 && n.max != maxHP {
 		e.metadataRevision++
 	}
 	n.observed = t
 	old := n.hp
+	oldPeak := n.peak
 	wasKnown := n.known
-	if max > 0 {
-		n.max = max
+	if maxHP > 0 {
+		n.max = maxHP
+	}
+	if current > n.peak {
+		n.peak = current
+	}
+	if n.max > n.peak {
+		n.peak = n.max
 	}
 	n.hp = current
 	n.known = true
+	if e.active && e.boss == 0 && e.npcs[id] != nil {
+		e.promoteBoss(id)
+	}
 	if e.active && e.boss == id {
+		full := n.max
+		if full == 0 {
+			full = oldPeak
+		}
 		if current == 0 {
 			e.finish(t, "Boss defeated", false)
-		} else if wasKnown && old > 0 && old < n.max && current == n.max {
-			e.finish(t, "Boss reset · ready for next pull", false)
+		} else if full > 0 && current >= full && (!wasKnown || old < full || !e.meter.first.IsZero()) {
+			resetAt := t
+			if resetAt.Before(e.lastDamage) {
+				resetAt = e.lastDamage
+			}
+			e.finish(resetAt, "Boss reset · ready for next pull", true)
+			e.boss = id
+			e.manualReset = true
+			e.resetBoundary = resetAt
 		}
 	}
 }

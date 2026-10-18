@@ -27,8 +27,9 @@ Polkit authorizes only capture when necessary; the decoder and GUI run unprivile
 Open-world fights end after five seconds without damage. A recognised boss
 starts a boss-only session; add damage is excluded. Boss death, full-health reset,
 zone/login changes, or a conservative 90-second idle fallback end the encounter.
-Elapsed time includes boss mechanics. Final results remain visible until the
-next combat begins. The health bar appears only for recognised bosses and uses
+Elapsed time includes boss mechanics. Final results remain visible after a kill,
+whereas a full-health boss reset archives the pull and immediately clears damage
+and timers for the next pull. The health bar appears only for recognised bosses and uses
 captured HP/max-HP; damage is never subtracted to invent health. Directly below
 the health bar, the overlay displays combined party DPS, the 5-minute boss wipe
 countdown, elapsed fight time, and estimated remaining kill time, colour-coded by
@@ -51,7 +52,9 @@ KDE display detection uses an ephemeral KWin script to follow the AION 2 window.
 Other layer-shell desktops can use the tray's display selector.
 
 Settings and damage details use separate ordinary windows. Settings are saved
-with QSettings; the old AionDPS settings are migrated once. Test mode shares the
+with QSettings; the old AionDPS settings are migrated once. Minimalist mode hides
+bar fills and backgrounds in favour of a compact text-only ranking while keeping
+class icons and colour-coding. Test mode shares the
 real bar delegates/models and displays five simulated players with eight skills
 each and boss health. It never writes fake history
 or stops real capture.

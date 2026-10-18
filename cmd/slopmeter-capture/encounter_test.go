@@ -66,12 +66,24 @@ func TestBossResetAndOpenWorldAfterKill(t *testing.T) {
 	e.hit(t0, game.Hit{Actor: 1, Target: 20, Damage: 100})
 	e.health(t0.Add(time.Second), 20, 800, 0)
 	e.health(t0.Add(2*time.Second), 20, 1000, 0)
-	if e.active {
-		t.Fatal("reset to full health did not finish fight")
+	s := e.snapshot(identities{}, t0.Add(2*time.Second))
+	if e.active || !s.Cleared || len(s.Actors) != 0 || s.Duration != 0 || s.Boss == nil || s.Boss.HP != 1000 || s.Boss.Percent != 100 {
+		t.Fatalf("reset to full health did not clear damage and timers: %+v", s)
 	}
 	e.hit(t0.Add(3*time.Second), game.Hit{Actor: 1, Target: 9, Damage: 50})
 	if e.boss != 0 || e.meter.target != 0 || e.meter.actors[1].damage != 50 {
 		t.Fatal("boss filter leaked into open world")
+	}
+	// Reset must also trigger when max HP was not captured in spawn data, if HP returns to initial peak.
+	e2, _ := encounterFixture()
+	e2.npc(20, bossCode())
+	e2.health(t0, 20, 5000, 0)
+	e2.hit(t0.Add(time.Second), game.Hit{Actor: 1, Target: 20, Damage: 400})
+	e2.health(t0.Add(2*time.Second), 20, 4600, 0)
+	e2.health(t0.Add(3*time.Second), 20, 5000, 0)
+	s2 := e2.snapshot(identities{}, t0.Add(3*time.Second))
+	if e2.active || !s2.Cleared || len(s2.Actors) != 0 || s2.Duration != 0 {
+		t.Fatalf("reset without spawn max HP did not clear fight: %+v", s2)
 	}
 }
 func TestBossPacketHealthAndUnknownMaximum(t *testing.T) {

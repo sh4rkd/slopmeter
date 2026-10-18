@@ -28,7 +28,7 @@ Click a screenshot to view it at full size.
 - **Party DPS:** class icons, coloured player bars, and damage contribution.
 - **Boss encounters:** captured boss health, colour-coded estimated kill time, area names and separate combat sessions.
 - **Fight history:** the last 10 sessions, with per-player skill breakdowns and cast timelines.
-- **Customisation:** bar styles, dimensions, spacing, opacity, score visibility, damage display, and refresh rate.
+- **Customisation:** minimalist text-only mode, bar styles, dimensions, spacing, opacity, score visibility, damage display, and refresh rate.
 - **Test mode:** a five-player encounter with boss health and detailed skill data.
 
 See [DPS calculation](docs/dps-calculation.md) for timing and decoding details.

@@ -8,8 +8,9 @@ fraction of the group's captured damage. Refresh rate changes do not change tota
 The clock starts at the first accepted positive hit. During a live boss fight,
 elapsed time includes mechanics and damage downtime. Finished fights freeze at
 the encounter's end; ordinary fights end at the last damage timestamp after the
-idle timeout. The reset button saves the interrupted fight, clears damage and
-timing, and starts a new calculation on the next hit without restarting capture.
+idle timeout. A boss full-health reset (HP returning to 100%) or the manual reset
+button saves the interrupted fight, clears damage and timing, and starts a new
+calculation on the next hit without restarting capture.
 
 ## Reference comparison
 
