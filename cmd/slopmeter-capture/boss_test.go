@@ -91,12 +91,12 @@ func TestBossKillTimeEstimate(t *testing.T) {
 	e.hit(now, game.Hit{Actor: 1, Target: 20, Damage: 600})
 	e.hit(now.Add(10*time.Second), game.Hit{Actor: 2, Target: 20, Damage: 400})
 	s := e.snapshot(identities{}, now.Add(10*time.Second))
-	if s.Boss == nil || !s.Boss.ETAKnown || s.Boss.ETA != 120 {
+	if s.Boss == nil || !s.Boss.ETAKnown || s.Boss.ETA != 120 || s.Boss.TotalETA != 130 || s.Boss.TimeLeft != 290 {
 		t.Fatalf("unexpected boss ETA: %+v", s.Boss)
 	}
 	e.health(now.Add(12*time.Second), 20, 0, 0)
 	s = e.snapshot(identities{}, now.Add(12*time.Second))
-	if s.Boss == nil || !s.Boss.ETAKnown || s.Boss.ETA != 0 {
+	if s.Boss == nil || !s.Boss.ETAKnown || s.Boss.ETA != 0 || s.Boss.TotalETA != 12 || s.Boss.TimeLeft != 288 {
 		t.Fatalf("defeated boss ETA should be 0: %+v", s.Boss)
 	}
 }

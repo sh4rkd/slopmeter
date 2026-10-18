@@ -25,6 +25,7 @@ Window {
         for (let i = 0; i < players.length; ++i) sum += Number(players[i].dps || 0)
         return sum
     }
+    readonly property real bossTimeLimitSeconds: 300
     function bossEtaKnown() {
         if (!backend.boss || !backend.boss.known) return false
         if (backend.boss.etaKnown !== undefined) return Boolean(backend.boss.etaKnown)
@@ -38,16 +39,25 @@ Window {
         const dps = partyDps()
         return dps > 0 ? hp / dps : 0
     }
-    function etaColor(seconds, known) {
+    function bossTotalSeconds() {
+        const elapsed = Math.max(0, Number(backend.duration || 0))
+        if (backend.boss && backend.boss.totalEta !== undefined && bossEtaKnown()) return Math.max(elapsed, Number(backend.boss.totalEta || 0))
+        return elapsed + bossEtaSeconds()
+    }
+    function bossTimeLeftSeconds() {
+        if (backend.boss && backend.boss.timeLeft !== undefined) return Math.max(0, Number(backend.boss.timeLeft || 0))
+        return Math.max(0, bossTimeLimitSeconds - Math.max(0, Number(backend.duration || 0)))
+    }
+    function etaColor(totalSeconds, known) {
         if (!known) return "#8e9eb5"
-        const value = Number(seconds || 0)
+        const value = Number(totalSeconds || 0)
         if (value > 300) return "#ee6464"
         if (value >= 240) return "#f1c778"
         return "#54cf82"
     }
-    function etaBackgroundColor(seconds, known) {
+    function etaBackgroundColor(totalSeconds, known) {
         if (!known) return "#273348"
-        const value = Number(seconds || 0)
+        const value = Number(totalSeconds || 0)
         if (value > 300) return "#3d252b"
         if (value >= 240) return "#3b3424"
         return "#21382e"
@@ -144,34 +154,60 @@ Window {
                         ToolTip.text: (backend.boss.name || "Target") + (!backend.boss.known ? " · Waiting for captured HP" : !backend.boss.maxKnown ? " · Maximum HP not detected" : "")
                     }
                     Rectangle {
+                        id: targetKillTimeBar
                         objectName: "targetKillTimeBar"
                         property bool etaReady: meter.bossEtaKnown()
+                        property real elapsedSeconds: Math.max(0, Number(backend.duration || 0))
                         property real etaSeconds: meter.bossEtaSeconds()
-                        property color statusColor: meter.etaColor(etaSeconds, etaReady)
-                        Layout.fillWidth: true; implicitHeight: 22; radius: 4
-                        color: meter.etaBackgroundColor(etaSeconds, etaReady)
-                        border.width: 1; border.color: etaReady ? Qt.rgba(statusColor.r, statusColor.g, statusColor.b, 0.55) : "#38465c"
-                        RowLayout {
-                            anchors.fill: parent; anchors.leftMargin: 6; anchors.rightMargin: 6; spacing: 6
-                            Rectangle {
-                                objectName: "targetKillTimeIndicator"
-                                Layout.preferredWidth: 7; Layout.preferredHeight: 7; radius: 3.5
-                                color: parent.parent.statusColor
+                        property real totalSeconds: meter.bossTotalSeconds()
+                        property real timeLeftSeconds: meter.bossTimeLeftSeconds()
+                        property bool timeExpired: elapsedSeconds >= meter.bossTimeLimitSeconds
+                        property bool colorReady: etaReady || timeExpired
+                        property real effectiveTotalSeconds: etaReady ? totalSeconds : elapsedSeconds
+                        property color statusColor: meter.etaColor(effectiveTotalSeconds, colorReady)
+                        Layout.fillWidth: true; implicitHeight: 38; radius: 4
+                        color: meter.etaBackgroundColor(effectiveTotalSeconds, colorReady)
+                        border.width: 1; border.color: colorReady ? Qt.rgba(statusColor.r, statusColor.g, statusColor.b, 0.55) : "#38465c"
+                        ColumnLayout {
+                            anchors.fill: parent; anchors.leftMargin: 6; anchors.rightMargin: 6; anchors.topMargin: 3; anchors.bottomMargin: 3; spacing: 1
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: 6
+                                Rectangle {
+                                    objectName: "targetKillTimeIndicator"
+                                    Layout.preferredWidth: 7; Layout.preferredHeight: 7; radius: 3.5
+                                    color: targetKillTimeBar.statusColor
+                                }
+                                Label {
+                                    objectName: "targetPartyDpsLabel"
+                                    text: "Party DPS · " + meter.dpsText(meter.partyDps())
+                                    color: "#e6edf6"; font.pixelSize: 10
+                                    Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight
+                                }
+                                Label {
+                                    objectName: "targetWipeCountdownLabel"
+                                    color: targetKillTimeBar.timeLeftSeconds <= 0 ? "#ee6464" : targetKillTimeBar.timeLeftSeconds <= 60 ? "#f1c778" : "#c7d4e6"
+                                    font.pixelSize: 10; font.bold: true
+                                    text: targetKillTimeBar.timeLeftSeconds <= 0 && Number(backend.boss.hp || 0) > 0 ? "Wipe (0:00 left)" : "Wipe left " + meter.clock(targetKillTimeBar.timeLeftSeconds)
+                                }
                             }
-                            Label {
-                                text: "Est. kill time · " + meter.dpsText(meter.partyDps()) + " party DPS"
-                                color: "#e6edf6"; font.pixelSize: 10
-                                Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight
-                            }
-                            Label {
-                                objectName: "targetKillTimeLabel"
-                                color: parent.parent.statusColor; font.pixelSize: 11; font.bold: true
-                                text: !backend.boss.known ? "HP unknown" : !parent.parent.etaReady ? "Waiting for DPS…" : Number(backend.boss.hp || 0) <= 0 ? "Defeated (0:00)" : "~" + meter.clock(parent.parent.etaSeconds)
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: 6
+                                Label {
+                                    objectName: "targetElapsedTimeLabel"
+                                    text: "Elapsed " + meter.clock(targetKillTimeBar.elapsedSeconds) + " / 5:00"
+                                    color: "#b8c7dc"; font.pixelSize: 10
+                                    Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight
+                                }
+                                Label {
+                                    objectName: "targetKillTimeLabel"
+                                    color: targetKillTimeBar.statusColor; font.pixelSize: 11; font.bold: true
+                                    text: !backend.boss.known ? "HP unknown" : !targetKillTimeBar.etaReady ? "Waiting for DPS…" : Number(backend.boss.hp || 0) <= 0 ? "Defeated (" + meter.clock(targetKillTimeBar.elapsedSeconds) + ")" : "Est. ~" + meter.clock(targetKillTimeBar.etaSeconds) + " (tot ~" + meter.clock(targetKillTimeBar.totalSeconds) + ")"
+                                }
                             }
                         }
                         HoverHandler {id: etaHover}
                         ToolTip.visible: etaHover.hovered
-                        ToolTip.text: "Estimated remaining time to kill " + (backend.boss.name || "boss") + " at current party DPS (< 4:00 green · 4:00–5:00 yellow · > 5:00 red)"
+                        ToolTip.text: "5:00 boss wipe limit · Elapsed " + meter.clock(elapsedSeconds) + " · Time left " + meter.clock(timeLeftSeconds) + (etaReady ? " · Est. remaining ~" + meter.clock(etaSeconds) + " · Projected total ~" + meter.clock(totalSeconds) : "") + " (projected total < 4:00 green · 4:00–5:00 yellow · > 5:00 red)"
                     }
                 }
                 Label {

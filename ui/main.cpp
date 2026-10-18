@@ -217,11 +217,14 @@ public:
         }
         const qlonglong maximumHP=8000000;
         const qlonglong currentHP=qRound64(maximumHP*qMax(0.05,0.68-elapsed*0.002));
+        const double fightDuration=previewBaseSeconds+elapsed;
         const double partyDps=totalDamage/seconds;
         const double eta=partyDps>0?currentHP/partyDps:0.0;
+        const double totalEta=partyDps>0?fightDuration+eta:fightDuration;
+        const double timeLeft=qMax(0.0,300.0-fightDuration);
         QVariantMap previewBoss{{"entity",900100},{"name","Fediv Wraith"},{"hp",currentHP},{"max",maximumHP},
-            {"percent",100.0*currentHP/maximumHP},{"eta",eta},{"etaKnown",partyDps>0},{"known",true},{"maxKnown",true}};
-        return {{"character","Test party"},{"encounter","Test mode"},{"duration",previewBaseSeconds+elapsed},{"active",true},{"session",0},{"actors",rows},{"boss",previewBoss},{"scene",QVariantMap{{"id",600021},{"name","Fire Temple"},{"instance",1}}}};
+            {"percent",100.0*currentHP/maximumHP},{"eta",eta},{"totalEta",totalEta},{"timeLeft",timeLeft},{"etaKnown",partyDps>0},{"known",true},{"maxKnown",true}};
+        return {{"character","Test party"},{"encounter","Test mode"},{"duration",fightDuration},{"active",true},{"session",0},{"actors",rows},{"boss",previewBoss},{"scene",QVariantMap{{"id",600021},{"name","Fire Temple"},{"instance",1}}}};
     }
     int widthSetting=QSettings().value("appearance/barWidth",352).toInt();
     int heightSetting=QSettings().value("appearance/barHeight",44).toInt();
@@ -731,14 +734,22 @@ int main(int argc,char **argv) {
         auto hpBar=window->findChild<QQuickItem*>("targetHealthBar");
         auto etaBar=window->findChild<QQuickItem*>("targetKillTimeBar");
         auto etaLabel=window->findChild<QObject*>("targetKillTimeLabel");
+        auto wipeLabel=window->findChild<QObject*>("targetWipeCountdownLabel");
+        auto elapsedLabel=window->findChild<QObject*>("targetElapsedTimeLabel");
         const auto savedBoss=bridge.bossState;bridge.bossState.clear();emit bridge.bossChanged();settle();
-        if(!hpBar||hpBar->isVisible()||!etaBar||etaBar->isVisible()||!etaLabel) {app.exit(46);return;}
+        if(!hpBar||hpBar->isVisible()||!etaBar||etaBar->isVisible()||!etaLabel||!wipeLabel||!elapsedLabel) {app.exit(46);return;}
         QVariant greenColor,yellowLow,yellowHigh,redColor;
         QMetaObject::invokeMethod(window,"etaColor",Q_RETURN_ARG(QVariant,greenColor),Q_ARG(QVariant,QVariant(239.0)),Q_ARG(QVariant,QVariant(true)));
         QMetaObject::invokeMethod(window,"etaColor",Q_RETURN_ARG(QVariant,yellowLow),Q_ARG(QVariant,QVariant(240.0)),Q_ARG(QVariant,QVariant(true)));
         QMetaObject::invokeMethod(window,"etaColor",Q_RETURN_ARG(QVariant,yellowHigh),Q_ARG(QVariant,QVariant(300.0)),Q_ARG(QVariant,QVariant(true)));
         QMetaObject::invokeMethod(window,"etaColor",Q_RETURN_ARG(QVariant,redColor),Q_ARG(QVariant,QVariant(301.0)),Q_ARG(QVariant,QVariant(true)));
         if(greenColor.toString()!="#54cf82"||yellowLow.toString()!="#f1c778"||yellowHigh.toString()!="#f1c778"||redColor.toString()!="#ee6464") {app.exit(46);return;}
+        const auto savedSpan=bridge.span;
+        bridge.span=240.0;emit bridge.durationChanged();
+        bridge.bossState=QVariantMap{{"entity",900100},{"name","Fediv Wraith"},{"hp",900000},{"max",8000000},{"percent",11.25},{"eta",90.0},{"totalEta",330.0},{"timeLeft",60.0},{"etaKnown",true},{"known",true},{"maxKnown",true}};
+        emit bridge.bossChanged();settle();
+        if(etaBar->property("statusColor").value<QColor>().name().toLower()!="#ee6464"||!wipeLabel->property("text").toString().contains("1:00")||!elapsedLabel->property("text").toString().contains("4:00")||!etaLabel->property("text").toString().contains("1:30")) {app.exit(46);return;}
+        bridge.span=savedSpan;emit bridge.durationChanged();
         bridge.bossState=savedBoss;emit bridge.bossChanged();settle();
         if(!moveSlider("backgroundOpacitySlider",20)) {app.exit(22);return;}
         settle();

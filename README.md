@@ -115,7 +115,7 @@ GNOME's default compositor does not provide the required layer-shell protocol.
 
 | Feature | Current support |
 | --- | --- |
-| Boss health & kill time | Current HP is read from network packets. Remaining HP percentage is shown when maximum HP is known, and estimated remaining kill time (`remaining HP / party DPS`) is colour-coded (< 4 min green, 4–5 min yellow, > 5 min red). |
+| Boss health & kill time | Current HP is read from network packets. Remaining HP percentage is shown when maximum HP is known, along with the 5-minute boss wipe countdown, elapsed fight time, and estimated remaining kill time (`remaining HP / party DPS`), colour-coded by projected total fight time (`elapsed + ETA`: < 4 min green, 4–5 min yellow, > 5 min red). |
 
 Boss health needs captured health updates and a boss identified by the bundled NPC
 catalogue. Start capture before entering the area; re-enter or relog if spawn data

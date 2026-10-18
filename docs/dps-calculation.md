@@ -46,16 +46,19 @@ appears when the timeline is truncated, while skill usage totals continue counti
 ## Boss kill time estimation
 
 When a recognised boss has captured HP and the party has recorded positive damage,
-SlopMeter estimates the remaining time to kill the boss from the elapsed fight
-time and total party damage:
+SlopMeter estimates the remaining time to kill the boss and compares the projected
+total fight time against the 5-minute (`5:00`) boss wipe limit:
 
 - **Party DPS** = `total party damage / max(fight seconds, 1)`
+- **Time left (wipe countdown)** = `max(0, 300s - elapsed fight seconds)`
 - **Estimated remaining kill time (ETA)** = `current boss HP / party DPS`
+- **Projected total fight time** = `elapsed fight seconds + ETA`
 
-The estimate appears directly below the boss health bar and is colour-coded by
-the remaining time:
+The section directly below the boss health bar displays party DPS, wipe time left,
+elapsed fight time, and estimated remaining kill time. It is colour-coded by the
+projected total fight time (`elapsed + ETA`):
 
-- **Green:** under 4 minutes (`< 240s`)
-- **Yellow:** between 4 and 5 minutes (`240s–300s`)
-- **Red:** over 5 minutes (`> 300s`)
+- **Green:** projected total under 4 minutes (`< 240s`)
+- **Yellow:** projected total between 4 and 5 minutes (`240s–300s`)
+- **Red:** projected total over the 5-minute wipe limit (`> 300s`)
 

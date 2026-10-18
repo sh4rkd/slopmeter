@@ -30,8 +30,9 @@ zone/login changes, or a conservative 90-second idle fallback end the encounter.
 Elapsed time includes boss mechanics. Final results remain visible until the
 next combat begins. The health bar appears only for recognised bosses and uses
 captured HP/max-HP; damage is never subtracted to invent health. Directly below
-the health bar, the overlay displays the estimated remaining kill time based on
-captured boss HP and combined party DPS (`< 4m` green, `4m–5m` yellow, `> 5m` red).
+the health bar, the overlay displays combined party DPS, the 5-minute boss wipe
+countdown, elapsed fight time, and estimated remaining kill time, colour-coded by
+projected total fight duration (`elapsed + ETA`: `< 4m` green, `4m–5m` yellow, `> 5m` red).
 
 The last 10 sessions are persisted with atomic file replacement at
 `$XDG_STATE_HOME/aiondps/history.json`, or `~/.local/state/aiondps/history.json`.
