@@ -26,7 +26,7 @@ Window {
             Label {text: "Layout"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
             CheckBox {objectName: "testModeToggle"; palette.windowText: "#e6edf6"; text: "Test mode"; checked: backend.testMode; onToggled: backend.testMode = checked}
             CheckBox {objectName: "minimalistModeToggle"; palette.windowText: "#e6edf6"; text: "Minimalist mode (text-only, no bars)"; checked: backend.minimalistMode; onToggled: backend.minimalistMode = checked}
-            CheckBox {objectName: "minimalistCompactDamageToggle"; Layout.leftMargin: 20; visible: backend.minimalistMode; enabled: backend.showTotalDamage; palette.windowText: "#e6edf6"; text: "Compact total damage (1.5K / 6.7M vs 1,523 / 6,741,514)"; checked: backend.minimalistCompactDamage; onToggled: backend.minimalistCompactDamage = checked}
+            CheckBox {objectName: "minimalistCompactDamageToggle"; Layout.leftMargin: 20; visible: backend.minimalistMode; palette.windowText: "#e6edf6"; text: "Compact numbers — damage, CP/GS, HP (102.3K / 6.7M vs 102,301 / 6,741,514)"; checked: backend.minimalistCompactDamage; onToggled: backend.minimalistCompactDamage = checked}
             CheckBox {objectName: "borderToggle"; palette.windowText: "#e6edf6"; text: "Show meter border"; checked: backend.showBorder; onToggled: backend.showBorder = checked}
             Label {text: "Bar growth"; color: "#c0cbdc"}
             ComboBox {objectName: "barGrowthSelector"; Layout.fillWidth: true; model: ["Down · keep top edge fixed", "Up · keep bottom edge fixed"]; currentIndex: backend.growUp ? 1 : 0; onActivated: backend.growUp = currentIndex === 1}

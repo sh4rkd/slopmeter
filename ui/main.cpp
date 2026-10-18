@@ -790,14 +790,18 @@ int main(int argc,char **argv) {
         if(!QMetaObject::invokeMethod(minimalistToggle,"toggled")||!bridge.minimalistMode()||!minimalistCompactToggle->isVisible()) {app.exit(90);return;}
         settle();
         {Bridge restored;if(!restored.minimalistMode()||!restored.minimalistCompactDamage()) {app.exit(90);return;}}
-        QVariant compactDmg,fullDmg;
+        QVariant compactDmg,fullDmg,compactScore,fullScore,compactHp,fullHp;
         QMetaObject::invokeMethod(window,"minimalistDamageText",Q_RETURN_ARG(QVariant,compactDmg),Q_ARG(QVariant,QVariant(1523.0)));
-        if(!compactDmg.toString().endsWith("K")) {app.exit(92);return;}
+        QMetaObject::invokeMethod(window,"scoreValueText",Q_RETURN_ARG(QVariant,compactScore),Q_ARG(QVariant,QVariant(102301.0)));
+        QMetaObject::invokeMethod(window,"bossHpValueText",Q_RETURN_ARG(QVariant,compactHp),Q_ARG(QVariant,QVariant(8000000.0)));
+        if(!compactDmg.toString().endsWith("K")||!compactScore.toString().endsWith("K")||!compactHp.toString().endsWith("M")) {app.exit(92);return;}
         minimalistCompactToggle->setProperty("checked",false);
         if(!QMetaObject::invokeMethod(minimalistCompactToggle,"toggled")||bridge.minimalistCompactDamage()) {app.exit(92);return;}
         {Bridge restored;if(restored.minimalistCompactDamage()) {app.exit(92);return;}}
         QMetaObject::invokeMethod(window,"minimalistDamageText",Q_RETURN_ARG(QVariant,fullDmg),Q_ARG(QVariant,QVariant(6741514.0)));
-        if(fullDmg.toString().endsWith("M")||fullDmg.toString().endsWith("K")) {app.exit(92);return;}
+        QMetaObject::invokeMethod(window,"scoreValueText",Q_RETURN_ARG(QVariant,fullScore),Q_ARG(QVariant,QVariant(102301.0)));
+        QMetaObject::invokeMethod(window,"bossHpValueText",Q_RETURN_ARG(QVariant,fullHp),Q_ARG(QVariant,QVariant(8000000.0)));
+        if(fullDmg.toString().endsWith("M")||fullDmg.toString().endsWith("K")||fullScore.toString().endsWith("K")||fullHp.toString().endsWith("M")) {app.exit(92);return;}
         QQuickItem *minStats=nullptr,*dmgFill=nullptr,*nameLbl=nullptr;
         QList<QQuickItem*> searchQueue{bars};
         while(!searchQueue.isEmpty()) {

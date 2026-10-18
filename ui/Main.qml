@@ -62,21 +62,31 @@ Window {
         if (value >= 240) return "#3b3424"
         return "#21382e"
     }
-    function dpsText(value) {
-        const amount = Number(value || 0)
-        if (!backend.roundedDps) return number(amount)
-        const rounded = Math.round(amount)
+    function compactNumber(value) {
+        const rounded = Math.round(Number(value || 0))
         if (rounded >= 999950) return (rounded / 1000000).toLocaleString(Qt.locale(), 'f', 1) + "M"
         if (rounded >= 1000) return (rounded / 1000).toLocaleString(Qt.locale(), 'f', 1) + "K"
         return number(rounded)
     }
+    function dpsText(value) {
+        const amount = Number(value || 0)
+        if (!backend.roundedDps) return number(amount)
+        return compactNumber(amount)
+    }
     function minimalistDamageText(value) {
         const amount = Number(value || 0)
         if (!backend.minimalistCompactDamage) return number(amount)
-        const rounded = Math.round(amount)
-        if (rounded >= 999950) return (rounded / 1000000).toLocaleString(Qt.locale(), 'f', 1) + "M"
-        if (rounded >= 1000) return (rounded / 1000).toLocaleString(Qt.locale(), 'f', 1) + "K"
-        return number(rounded)
+        return compactNumber(amount)
+    }
+    function scoreValueText(value) {
+        const amount = Number(value || 0)
+        if (backend.minimalistMode ? !backend.minimalistCompactDamage : !backend.roundedDps) return number(amount)
+        return compactNumber(amount)
+    }
+    function bossHpValueText(value) {
+        const amount = Number(value || 0)
+        if (backend.minimalistMode && backend.minimalistCompactDamage) return compactNumber(amount)
+        return number(amount)
     }
     function classColor(name) {
         // Match A2Tools' jobColorMap; Elementalist is named Spiritmaster there.
@@ -163,7 +173,7 @@ Window {
                             Label {text: backend.boss.name || "Target"; color: backend.minimalistMode ? "#ff9e9e" : "#fff1eb"; font.pixelSize: 11; font.bold: true; Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight}
                             Label {
                                 color: "#fff1eb"; font.pixelSize: 11; Layout.maximumWidth: parent.width * 0.65; elide: Text.ElideRight
-                                text: !backend.boss.known ? "HP unknown" : backend.boss.maxKnown ? meter.number(backend.boss.hp) + " / " + meter.number(backend.boss.max) + " · " + Number(backend.boss.percent).toFixed(1) + "%" : meter.number(backend.boss.hp) + " HP"
+                                text: !backend.boss.known ? "HP unknown" : backend.boss.maxKnown ? meter.bossHpValueText(backend.boss.hp) + " / " + meter.bossHpValueText(backend.boss.max) + " · " + Number(backend.boss.percent).toFixed(1) + "%" : meter.bossHpValueText(backend.boss.hp) + " HP"
                             }
                         }
                         HoverHandler {id: targetHover}
@@ -253,7 +263,7 @@ Window {
                         required property real combatPower
                         property bool showGear: backend.scoreDisplay === 1 || backend.scoreDisplay === 3
                         property bool showPower: backend.scoreDisplay === 1 || backend.scoreDisplay === 2
-                        property string gearText: (showGear && gearScore > 0 ? "GS " + meter.number(gearScore) : "") + (showGear && gearScore > 0 && showPower && combatPower > 0 ? " · " : "") + (showPower && combatPower > 0 ? "CP " + meter.number(combatPower) : "")
+                        property string gearText: (showGear && gearScore > 0 ? "GS " + meter.scoreValueText(gearScore) : "") + (showGear && gearScore > 0 && showPower && combatPower > 0 ? " · " : "") + (showPower && combatPower > 0 ? "CP " + meter.scoreValueText(combatPower) : "")
                         required property real damage
                         required property real dps
                         required property real share
