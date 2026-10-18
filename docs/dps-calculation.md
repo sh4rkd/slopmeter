@@ -42,3 +42,20 @@ Only casts accepted by the existing party and target filters are recorded; missi
 cast packets cannot be reconstructed from damage totals. Older saved fights have
 no timeline. Each player retains at most 5,000 cast timestamps per fight; a notice
 appears when the timeline is truncated, while skill usage totals continue counting.
+
+## Boss kill time estimation
+
+When a recognised boss has captured HP and the party has recorded positive damage,
+SlopMeter estimates the remaining time to kill the boss from the elapsed fight
+time and total party damage:
+
+- **Party DPS** = `total party damage / max(fight seconds, 1)`
+- **Estimated remaining kill time (ETA)** = `current boss HP / party DPS`
+
+The estimate appears directly below the boss health bar and is colour-coded by
+the remaining time:
+
+- **Green:** under 4 minutes (`< 240s`)
+- **Yellow:** between 4 and 5 minutes (`240s–300s`)
+- **Red:** over 5 minutes (`> 300s`)
+

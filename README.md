@@ -26,7 +26,7 @@ Click a screenshot to view it at full size.
 - **Remembered character:** save a name in Settings or reuse the last detected name; fresh capture metadata verifies the current player.
 
 - **Party DPS:** class icons, coloured player bars, and damage contribution.
-- **Boss encounters:** captured boss health, area names and separate combat sessions.
+- **Boss encounters:** captured boss health, colour-coded estimated kill time, area names and separate combat sessions.
 - **Fight history:** the last 10 sessions, with per-player skill breakdowns and cast timelines.
 - **Customisation:** bar styles, dimensions, spacing, opacity, score visibility, damage display, and refresh rate.
 - **Test mode:** a five-player encounter with boss health and detailed skill data.
@@ -115,7 +115,7 @@ GNOME's default compositor does not provide the required layer-shell protocol.
 
 | Feature | Current support |
 | --- | --- |
-| Boss health | Current HP is read from network packets. Remaining HP percentage is shown when maximum HP is known. |
+| Boss health & kill time | Current HP is read from network packets. Remaining HP percentage is shown when maximum HP is known, and estimated remaining kill time (`remaining HP / party DPS`) is colour-coded (< 4 min green, 4–5 min yellow, > 5 min red). |
 
 Boss health needs captured health updates and a boss identified by the bundled NPC
 catalogue. Start capture before entering the area; re-enter or relog if spawn data

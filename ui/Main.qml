@@ -19,6 +19,39 @@ Window {
     Loader {id: detailLoader; active: false; source: "FightDetails.qml"}
     function clock(seconds) { const value = Math.max(0, Math.floor(Number(seconds || 0))); return Math.floor(value/60) + ":" + (value%60).toString().padStart(2,"0") }
     function number(value) { return Number(value || 0).toLocaleString(Qt.locale(), 'f', 0) }
+    function partyDps() {
+        let sum = 0
+        const players = backend.displayPlayers || []
+        for (let i = 0; i < players.length; ++i) sum += Number(players[i].dps || 0)
+        return sum
+    }
+    function bossEtaKnown() {
+        if (!backend.boss || !backend.boss.known) return false
+        if (backend.boss.etaKnown !== undefined) return Boolean(backend.boss.etaKnown)
+        return Number(backend.boss.hp || 0) === 0 || partyDps() > 0
+    }
+    function bossEtaSeconds() {
+        if (!backend.boss || !backend.boss.known) return 0
+        if (backend.boss.etaKnown !== undefined) return Math.max(0, Number(backend.boss.eta || 0))
+        const hp = Number(backend.boss.hp || 0)
+        if (hp <= 0) return 0
+        const dps = partyDps()
+        return dps > 0 ? hp / dps : 0
+    }
+    function etaColor(seconds, known) {
+        if (!known) return "#8e9eb5"
+        const value = Number(seconds || 0)
+        if (value > 300) return "#ee6464"
+        if (value >= 240) return "#f1c778"
+        return "#54cf82"
+    }
+    function etaBackgroundColor(seconds, known) {
+        if (!known) return "#273348"
+        const value = Number(seconds || 0)
+        if (value > 300) return "#3d252b"
+        if (value >= 240) return "#3b3424"
+        return "#21382e"
+    }
     function dpsText(value) {
         const amount = Number(value || 0)
         if (!backend.roundedDps) return number(amount)
@@ -109,6 +142,36 @@ Window {
                         HoverHandler {id: targetHover}
                         ToolTip.visible: targetHover.hovered
                         ToolTip.text: (backend.boss.name || "Target") + (!backend.boss.known ? " · Waiting for captured HP" : !backend.boss.maxKnown ? " · Maximum HP not detected" : "")
+                    }
+                    Rectangle {
+                        objectName: "targetKillTimeBar"
+                        property bool etaReady: meter.bossEtaKnown()
+                        property real etaSeconds: meter.bossEtaSeconds()
+                        property color statusColor: meter.etaColor(etaSeconds, etaReady)
+                        Layout.fillWidth: true; implicitHeight: 22; radius: 4
+                        color: meter.etaBackgroundColor(etaSeconds, etaReady)
+                        border.width: 1; border.color: etaReady ? Qt.rgba(statusColor.r, statusColor.g, statusColor.b, 0.55) : "#38465c"
+                        RowLayout {
+                            anchors.fill: parent; anchors.leftMargin: 6; anchors.rightMargin: 6; spacing: 6
+                            Rectangle {
+                                objectName: "targetKillTimeIndicator"
+                                Layout.preferredWidth: 7; Layout.preferredHeight: 7; radius: 3.5
+                                color: parent.parent.statusColor
+                            }
+                            Label {
+                                text: "Est. kill time · " + meter.dpsText(meter.partyDps()) + " party DPS"
+                                color: "#e6edf6"; font.pixelSize: 10
+                                Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight
+                            }
+                            Label {
+                                objectName: "targetKillTimeLabel"
+                                color: parent.parent.statusColor; font.pixelSize: 11; font.bold: true
+                                text: !backend.boss.known ? "HP unknown" : !parent.parent.etaReady ? "Waiting for DPS…" : Number(backend.boss.hp || 0) <= 0 ? "Defeated (0:00)" : "~" + meter.clock(parent.parent.etaSeconds)
+                            }
+                        }
+                        HoverHandler {id: etaHover}
+                        ToolTip.visible: etaHover.hovered
+                        ToolTip.text: "Estimated remaining time to kill " + (backend.boss.name || "boss") + " at current party DPS (< 4:00 green · 4:00–5:00 yellow · > 5:00 red)"
                     }
                 }
                 Label {

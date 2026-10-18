@@ -217,8 +217,10 @@ public:
         }
         const qlonglong maximumHP=8000000;
         const qlonglong currentHP=qRound64(maximumHP*qMax(0.05,0.68-elapsed*0.002));
+        const double partyDps=totalDamage/seconds;
+        const double eta=partyDps>0?currentHP/partyDps:0.0;
         QVariantMap previewBoss{{"entity",900100},{"name","Fediv Wraith"},{"hp",currentHP},{"max",maximumHP},
-            {"percent",100.0*currentHP/maximumHP},{"known",true},{"maxKnown",true}};
+            {"percent",100.0*currentHP/maximumHP},{"eta",eta},{"etaKnown",partyDps>0},{"known",true},{"maxKnown",true}};
         return {{"character","Test party"},{"encounter","Test mode"},{"duration",previewBaseSeconds+elapsed},{"active",true},{"session",0},{"actors",rows},{"boss",previewBoss},{"scene",QVariantMap{{"id",600021},{"name","Fire Temple"},{"instance",1}}}};
     }
     int widthSetting=QSettings().value("appearance/barWidth",352).toInt();
@@ -727,8 +729,16 @@ int main(int argc,char **argv) {
         while(!pending.isEmpty()) {auto item=pending.takeFirst();if(item->objectName()=="compactShare") {compact=item;break;}pending.append(item->childItems());}
         if(!compact||!compact->isVisible()) {app.exit(45);return;}
         auto hpBar=window->findChild<QQuickItem*>("targetHealthBar");
+        auto etaBar=window->findChild<QQuickItem*>("targetKillTimeBar");
+        auto etaLabel=window->findChild<QObject*>("targetKillTimeLabel");
         const auto savedBoss=bridge.bossState;bridge.bossState.clear();emit bridge.bossChanged();settle();
-        if(!hpBar||hpBar->isVisible()) {app.exit(46);return;}
+        if(!hpBar||hpBar->isVisible()||!etaBar||etaBar->isVisible()||!etaLabel) {app.exit(46);return;}
+        QVariant greenColor,yellowLow,yellowHigh,redColor;
+        QMetaObject::invokeMethod(window,"etaColor",Q_RETURN_ARG(QVariant,greenColor),Q_ARG(QVariant,QVariant(239.0)),Q_ARG(QVariant,QVariant(true)));
+        QMetaObject::invokeMethod(window,"etaColor",Q_RETURN_ARG(QVariant,yellowLow),Q_ARG(QVariant,QVariant(240.0)),Q_ARG(QVariant,QVariant(true)));
+        QMetaObject::invokeMethod(window,"etaColor",Q_RETURN_ARG(QVariant,yellowHigh),Q_ARG(QVariant,QVariant(300.0)),Q_ARG(QVariant,QVariant(true)));
+        QMetaObject::invokeMethod(window,"etaColor",Q_RETURN_ARG(QVariant,redColor),Q_ARG(QVariant,QVariant(301.0)),Q_ARG(QVariant,QVariant(true)));
+        if(greenColor.toString()!="#54cf82"||yellowLow.toString()!="#f1c778"||yellowHigh.toString()!="#f1c778"||redColor.toString()!="#ee6464") {app.exit(46);return;}
         bridge.bossState=savedBoss;emit bridge.bossChanged();settle();
         if(!moveSlider("backgroundOpacitySlider",20)) {app.exit(22);return;}
         settle();
@@ -851,7 +861,7 @@ int main(int argc,char **argv) {
         if(bridge.pollInterval()!=200||!bridge.showBorder()) {app.exit(28);return;}
         if(!toggle("testModeToggle",true)) {app.exit(29);return;}
         settle();
-        if(!bridge.testMode()||bridge.actors.rowCount()!=5||peakPreviewRows>5||bridge.character()!="Test party"||bridge.skills.rowCount()!=8) {app.exit(29);return;}
+        if(!bridge.testMode()||bridge.actors.rowCount()!=5||peakPreviewRows>5||bridge.character()!="Test party"||bridge.skills.rowCount()!=8||!bridge.boss().value("etaKnown").toBool()||bridge.boss().value("eta").toDouble()<=0) {app.exit(29);return;}
         double damageBeforeReset=0;for(auto value:bridge.previewDamage) damageBeforeReset+=value;
         if(!QMetaObject::invokeMethod(resetButton,"clicked")) {app.exit(79);return;}
         settle();double damageAfterReset=0;for(auto value:bridge.previewDamage) damageAfterReset+=value;
@@ -859,7 +869,7 @@ int main(int argc,char **argv) {
         fprintf(stderr,"Manual reset button, history preservation and preview reset checks passed.\n");
 
         auto previewHealth=window->findChild<QQuickItem*>("targetHealthBar");
-        if(!previewHealth||!previewHealth->isVisible()||!bridge.boss().value("maxKnown").toBool()||bridge.boss().value("percent").toDouble()<=0||bridge.boss().value("percent").toDouble()>=100) {app.exit(49);return;}
+        if(!previewHealth||!previewHealth->isVisible()||!etaBar||!etaBar->isVisible()||!bridge.boss().value("maxKnown").toBool()||bridge.boss().value("percent").toDouble()<=0||bridge.boss().value("percent").toDouble()>=100) {app.exit(49);return;}
         if(!toggle("borderToggle",false)||QQmlProperty(bridge.panel,"border.width").read().toInt()!=0) {app.exit(30);return;}
         if(!moveSlider("barWidthSlider",480)||!moveSlider("barHeightSlider",40)||!moveSlider("barSpacingSlider",8)) {app.exit(31);return;}
         settle();

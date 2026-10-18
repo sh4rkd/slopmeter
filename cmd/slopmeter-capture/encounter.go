@@ -47,6 +47,8 @@ type bossDisplay struct {
 	HP       uint32      `json:"hp"`
 	Max      uint32      `json:"max"`
 	Percent  float64     `json:"percent"`
+	ETA      float64     `json:"eta"`
+	ETAKnown bool        `json:"etaKnown"`
 	Known    bool        `json:"known"`
 	MaxKnown bool        `json:"maxKnown"`
 }
@@ -445,6 +447,21 @@ func (e *encounter) snapshot(i identities, t time.Time) snapshot {
 		// Identity can arrive after the last hit. Show its captured HP immediately
 		// without waiting for another damage event or showing ordinary monsters.
 		s.Boss = e.bossSnapshot(e.lastTarget, i)
+	}
+	if s.Boss != nil && s.Boss.Known {
+		if s.Boss.HP == 0 {
+			s.Boss.ETA = 0
+			s.Boss.ETAKnown = true
+		} else {
+			var partyDPS float64
+			for _, a := range s.Actors {
+				partyDPS += a.DPS
+			}
+			if partyDPS > 0 {
+				s.Boss.ETA = float64(s.Boss.HP) / partyDPS
+				s.Boss.ETAKnown = true
+			}
+		}
 	}
 	s.HealthStatus = e.healthStatus(s.Boss)
 	return s
