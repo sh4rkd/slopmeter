@@ -115,6 +115,9 @@ class Bridge : public QObject {
     Q_PROPERTY(bool radarOther READ radarOther WRITE setRadarOther NOTIFY radarChanged)
     Q_PROPERTY(QString radarItemFilter READ radarItemFilter WRITE setRadarItemFilter NOTIFY radarChanged)
     Q_PROPERTY(QVariantList displayRadar READ displayRadar NOTIFY radarChanged)
+    Q_PROPERTY(int radarSelectedId READ radarSelectedId WRITE setRadarSelectedId NOTIFY radarSelectionChanged)
+    Q_PROPERTY(double radarRangeMeters READ radarRangeMeters WRITE setRadarRangeMeters NOTIFY radarRangeChanged)
+    Q_PROPERTY(QString radarSubmenu READ radarSubmenu WRITE setRadarSubmenu NOTIFY radarSubmenuChanged)
     Q_PROPERTY(QVariantMap detailPlayer READ detailPlayer NOTIFY detailChanged)
     Q_PROPERTY(QVariantMap detailFight READ detailFight NOTIFY detailChanged)
     Q_PROPERTY(bool testMode READ testMode WRITE setTestMode NOTIFY testModeChanged)
@@ -195,6 +198,71 @@ public:
     void setRadarOther(bool value) {if(radarOtherSetting==value) return;radarOtherSetting=value;QSettings().setValue("radar/other",value);emit radarChanged();}
     QString radarItemFilter() const {return radarItemFilterSetting;}
     void setRadarItemFilter(const QString &value) {if(radarItemFilterSetting==value) return;radarItemFilterSetting=value;QSettings().setValue("radar/itemFilter",value);emit radarChanged();}
+    int radarSelectedIdSetting=0;
+    double radarRangeMetersSetting=70.0;
+    QString radarSubmenuSetting="";
+    int radarSelectedId() const {return radarSelectedIdSetting;}
+    void setRadarSelectedId(int val) {if(radarSelectedIdSetting==val) return;radarSelectedIdSetting=val;emit radarSelectionChanged();}
+    double radarRangeMeters() const {return radarRangeMetersSetting;}
+    void setRadarRangeMeters(double val) {if(qFuzzyCompare(radarRangeMetersSetting,val)) return;radarRangeMetersSetting=val;emit radarRangeChanged();}
+    QString radarSubmenu() const {return radarSubmenuSetting;}
+    void setRadarSubmenu(const QString &val) {if(radarSubmenuSetting==val) return;radarSubmenuSetting=val;emit radarSubmenuChanged();}
+    Q_INVOKABLE QStringList radarSubItemsFor(const QString &catKey) const {
+        if(catKey=="gem") return {"Sapphire Gemstone", "Ruby Gemstone", "Diamond Gemstone"};
+        if(catKey=="ore") return {"Orichalcum Ore"};
+        if(catKey=="herb") return {"Azpha", "Calendula", "Pujery", "Conide", "Ohkra", "Morfa", "Raydam", "Aria", "Targena", "Mela", "Coriolus", "Inina", "Cypri", "Kukuru"};
+        if(catKey=="wood") return {"Asvata Log", "Yggdrasil Log"};
+        if(catKey=="odyle") return {"Odyle"};
+        if(catKey=="chest") return {"Hidden Cube"};
+        return {};
+    }
+    Q_INVOKABLE QVariantMap selectedRadarTarget() const {
+        const auto rows=displayRadar();
+        if(rows.isEmpty()) return {};
+        if(radarSelectedIdSetting!=0) {
+            for(const auto &item:rows) {
+                const auto map=item.toMap();
+                if(map.value("id").toInt()==radarSelectedIdSetting) return map;
+            }
+        }
+        return rows.first().toMap();
+    }
+    Q_INVOKABLE QString radarCategoryColor(const QString &cat) const {
+        if(cat=="chest") return "#f2c15a";
+        if(cat=="odyle") return "#6be0ff";
+        if(cat=="gem") return "#e082ff";
+        if(cat=="ore") return "#ff9f5a";
+        if(cat=="herb") return "#7be35a";
+        if(cat=="wood") return "#c89b6e";
+        return "#c0cbdc";
+    }
+    Q_INVOKABLE QString radarCategoryIcon(const QString &cat) const {
+        if(cat=="chest") return "◈";
+        if(cat=="odyle") return "✦";
+        if(cat=="gem") return "◆";
+        if(cat=="ore") return "⬡";
+        if(cat=="herb") return "❖";
+        if(cat=="wood") return "▤";
+        return "○";
+    }
+    Q_INVOKABLE QString radarVertShort(const QString &vDir) const {
+        if(vDir=="Arriba") return "▲";
+        if(vDir=="Abajo") return "▼";
+        return "";
+    }
+    Q_INVOKABLE QString radarVertBadge(const QString &vDir, double dz) const {
+        int d=qRound(qAbs(dz));
+        if(vDir=="Arriba") return QString("▲ ARRIBA (+%1m)").arg(d);
+        if(vDir=="Abajo") return QString("▼ ABAJO (-%1m)").arg(d);
+        return QString("• MISMO NIVEL (%1%2m)").arg(dz>=0?"+":"", QString::number(d));
+    }
+    Q_INVOKABLE QString radarHorizArrow(const QString &hDir) const {
+        if(hDir=="Frente") return "↑ FRENTE";
+        if(hDir=="Atrás") return "↓ ATRÁS";
+        if(hDir=="Izq") return "← IZQ";
+        if(hDir=="Der") return "→ DER";
+        return "● CENTRO";
+    }
     bool minimalistMode() const {return minimalistSetting;}
     void setMinimalistMode(bool value) {if(minimalistSetting==value) return;minimalistSetting=value;QSettings().setValue("appearance/minimalistMode",value);emit appearanceChanged();}
     bool minimalistCompactDamage() const {return minimalistCompactDamageSetting;}
@@ -651,6 +719,7 @@ public:
 signals:
     void interfacesChanged();
     void characterNameChanged();void captureChanged();void testModeChanged();void pollingChanged();void historyChanged();void detailChanged();void appearanceChanged();void characterChanged();void statusChanged();void durationChanged();void displayChanged();void encounterChanged();void bossChanged();void pvpChanged();void radarChanged();
+    void radarSelectionChanged();void radarRangeChanged();void radarSubmenuChanged();
 };
 static void global(void *data,wl_registry*,uint32_t,const char *interface,uint32_t) {if(!std::strcmp(interface,"zwlr_layer_shell_v1")) *static_cast<bool*>(data)=true;}
 static void removed(void*,wl_registry*,uint32_t) {}
