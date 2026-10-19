@@ -165,3 +165,49 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 		t.Fatalf("expected 5 radar items after chest despawn, got %d", len(snapAfter.Radar))
 	}
 }
+
+func TestRadarClientMovementAndByteInlineName(t *testing.T) {
+	now := time.Now()
+	fight := newEncounter(0, 5*time.Second, 90*time.Second)
+
+	// Client sends outgoing Move (wire.FromServer == 0) from selfEntity=200
+	fight.observeRadar(aMessage{
+		opcode: 0x371a,
+		flags:  0, // client packet
+		event:  game.Move{Entity: 200, Pos: game.Pos{X: 5000, Y: 5000, Z: 1000}},
+		t:      now,
+	}, 0)
+
+	// Spawn with 1-byte length inline name
+	var p []byte
+	p = binary.AppendUvarint(p, 777)
+	p = append(p, 0x1c, 0x00, 0x00, 0x00) // 4-byte mask
+	p = append(p, 0x01)                   // gate: inline name present
+	name := "Ruby Gemstone"
+	p = append(p, byte(len(name)))
+	p = append(p, []byte(name)...)
+	var codeBytes [4]byte
+	binary.LittleEndian.PutUint32(codeBytes[:], 1080503)
+	p = append(p, codeBytes[:]...)
+	p = append(p, 0x40, 0x02) // subtype
+	var posBytes [12]byte
+	putVec3(posBytes[:], 5000, 7000, 1000) // 20m Right (+Y)
+	p = append(p, posBytes[:]...)
+
+	fight.observeRadar(aMessage{
+		opcode:  0x3640,
+		flags:   wire.FromServer,
+		payload: p,
+		t:       now.Add(100 * time.Millisecond),
+	}, 200)
+
+	snap := fight.snapshot(identities{self: 200, name: "Tester"}, now.Add(200*time.Millisecond))
+	if len(snap.Radar) != 1 {
+		t.Fatalf("expected 1 radar item, got %d", len(snap.Radar))
+	}
+	item := snap.Radar[0]
+	if item.Name != "Ruby Gemstone" || item.Category != radarCategoryGem || item.Distance != 20.0 || item.HorizDir != "Der" {
+		t.Fatalf("unexpected item parsed: %+v", item)
+	}
+}
+

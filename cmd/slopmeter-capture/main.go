@@ -14,6 +14,7 @@ import (
 
 	"github.com/nuriland/a2kit"
 	"github.com/nuriland/a2kit/game"
+	"github.com/nuriland/a2kit/wire"
 )
 
 // Set by scripts/build.sh from VERSION.
@@ -315,6 +316,13 @@ loop:
 			hit, hasHit := combatHit(am)
 			if hasHit && am.event == nil {
 				am.event = hit
+			}
+			if msg.Flags&wire.FromServer == 0 && group.self == 0 {
+				if mv, ok := am.event.(game.Move); ok && mv.Entity != 0 {
+					group.self = mv.Entity
+				} else if c, ok := am.event.(game.Cast); ok && c.Actor != 0 {
+					group.self = c.Actor
+				}
 			}
 			group.observeMessage(am)
 			fight.observeRadar(am, group.self)

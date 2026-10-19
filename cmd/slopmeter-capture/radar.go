@@ -490,6 +490,21 @@ var selfPosSentinel = []byte{0x80, 0x75, 0xd5, 0x2a, 0xbb, 0x03, 0x00, 0x00}
 
 func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 	if m.flags&wire.FromServer == 0 {
+		// Packets sent by the local client to the server are from the local player
+		if mv, ok := m.event.(game.Move); ok && validWorldPos(mv.Pos) {
+			e.radar.updateSelfPos(mv.Pos)
+		} else if c, ok := m.event.(game.Cast); ok && validWorldPos(c.Pos) {
+			e.radar.updateSelfPos(c.Pos)
+		} else if m.opcode == 0x371A || m.opcode == 0x371B || m.opcode == 0x371C {
+			if id, rest, ok := readVar(m.payload); ok && id != 0 {
+				for skip := 0; skip <= 4 && skip+12 <= len(rest); skip++ {
+					if pos, valid := readVec3LE(rest[skip : skip+12]); valid {
+						e.radar.updateSelfPos(pos)
+						break
+					}
+				}
+			}
+		}
 		return
 	}
 	switch ev := m.event.(type) {
@@ -499,6 +514,8 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 	case game.Move:
 		if self != 0 && ev.Entity == self {
 			e.radar.updateSelfPos(ev.Pos)
+		} else if self == 0 && !e.radar.hasSelfPos && (e.radar.entities == nil || e.radar.entities[ev.Entity] == nil) && validWorldPos(ev.Pos) {
+			e.radar.updateSelfPos(ev.Pos)
 		} else if e.radar.entities != nil {
 			if ent, ok := e.radar.entities[ev.Entity]; ok && validWorldPos(ev.Pos) {
 				ent.pos = ev.Pos
@@ -507,7 +524,7 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 			}
 		}
 	case game.Cast:
-		if self != 0 && ev.Actor == self {
+		if (self != 0 && ev.Actor == self) || (self == 0 && !e.radar.hasSelfPos && validWorldPos(ev.Pos)) {
 			e.radar.updateSelfPos(ev.Pos)
 			if ev.Target != 0 && e.radar.entities != nil {
 				if targetEnt := e.radar.entities[ev.Target]; targetEnt != nil {
@@ -559,16 +576,27 @@ func (e *encounter) observeRadarSpawn(t time.Time, opcode wire.Opcode, payload [
 		offset := width + 1
 		var inlineName string
 		if gate&1 != 0 {
-			length, tail, valid := readVar(rest[offset:])
-			if !valid || length == 0 || length > 128 || uint32(len(tail)) < length {
+			nameLen := int(rest[offset])
+			if nameLen > 0 && nameLen <= 128 && offset+1+nameLen+4+2+12 <= len(rest) {
+				candidate := rest[offset+1 : offset+1+nameLen]
+				if utf8.Valid(candidate) {
+					inlineName = string(candidate)
+					offset = offset + 1 + nameLen
+				}
+			}
+			if inlineName == "" {
+				length, tail, valid := readVar(rest[offset:])
+				if valid && length > 0 && length <= 128 && uint32(len(tail)) >= length {
+					nameBytes := tail[:length]
+					if utf8.Valid(nameBytes) {
+						inlineName = string(nameBytes)
+						offset = len(rest) - len(tail) + int(length)
+					}
+				}
+			}
+			if inlineName == "" {
 				continue
 			}
-			nameBytes := tail[:length]
-			if !utf8.Valid(nameBytes) {
-				continue
-			}
-			inlineName = string(nameBytes)
-			offset = len(rest) - len(tail) + int(length)
 		}
 		if offset+4+2+12 > len(rest) {
 			continue
@@ -632,7 +660,7 @@ func computeDirection(selfPos game.Pos, hasSelfPos bool, hx, hy float32, hasHead
 	default:
 		horizDir = "Atrás"
 	}
-	return distMeters, relX, relY, zDeltaMeters, angleDeg, horizDir, vertDir, hasHeading
+	return distMeters, relX, relY, zDeltaMeters, angleDeg, horizDir, vertDir, true
 }
 
 func (e *encounter) radarSnapshot() []radarDisplay {
