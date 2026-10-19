@@ -305,6 +305,7 @@ loop:
 			oldSession, oldStatus, oldBoss := fight.number, fight.status, fight.boss
 			oldScene := fight.scene.sceneDisplay
 			oldMetadata := fight.metadataRevision
+			oldRadar := fight.radar.revision
 			am := aMessage{msg.Opcode, msg.Flags, msg.Payload, msg.Event, msg.Time}
 			fight.observe(am)
 			fight.tick(msg.Time)
@@ -316,6 +317,7 @@ loop:
 				am.event = hit
 			}
 			group.observeMessage(am)
+			fight.observeRadar(am, group.self)
 			if oldClassRevision != group.classRevision {
 				dirty = true
 				if err := history.enrichClasses(group.identities); err != nil {
@@ -327,6 +329,7 @@ loop:
 				fight = newEncounter(game.Entity(*target), *idle, *bossIdle)
 				fight.number = number
 				fight.onFinish = archive
+				fight.observeRadar(am, group.self)
 			}
 			if c, ok := msg.Event.(game.Cast); ok {
 				if group.accepts(c.Actor, msg.Time) {
@@ -352,7 +355,7 @@ loop:
 					dirty = true
 				}
 			}
-			if oldSelf != group.self || oldName != group.name || oldSession != fight.number || oldStatus != fight.status || oldBoss != fight.boss || oldScene != fight.scene.sceneDisplay || oldMetadata != fight.metadataRevision {
+			if oldSelf != group.self || oldName != group.name || oldSession != fight.number || oldStatus != fight.status || oldBoss != fight.boss || oldScene != fight.scene.sceneDisplay || oldMetadata != fight.metadataRevision || oldRadar != fight.radar.revision {
 				dirty = true
 			}
 			if p, ok := msg.Event.(game.Player); ok && (fight.meter.actors[p.Entity] != nil || fight.enemyMeter.actors[p.Entity] != nil) {

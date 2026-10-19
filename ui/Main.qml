@@ -143,6 +143,14 @@ Window {
                             cursorShape: active ? Qt.ClosedHandCursor : Qt.OpenHandCursor
                         }
                     }
+                    Button {
+                        objectName: "radarToggleButton"
+                        text: "◎"
+                        implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32
+                        palette.buttonText: backend.radarEnabled ? "#54cf82" : "#e6edf6"
+                        onClicked: backend.radarEnabled = !backend.radarEnabled
+                        ToolTip.visible: hovered; ToolTip.text: backend.radarEnabled ? "Radar detector ON (Cofres / Odyle / Recursos)" : "Toggle Radar detector (Cofres / Odyle / Recursos)"
+                    }
                     Button { objectName: "settingsButton"; text: "⚙"; implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32; onClicked: meter.openSettings(); ToolTip.visible: hovered; ToolTip.text: "Meter settings" }
                     Button { objectName: "resetDamageButton"; text: "↻"; implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32; onClicked: backend.resetDamage(); ToolTip.visible: hovered; ToolTip.text: "Reset current fight damage"; Accessible.name: "Reset current fight damage" }
                     Button { objectName: "minimizeButton"; text: "−"; implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32; onClicked: backend.hide(); ToolTip.visible: hovered; ToolTip.text: "Hide; restore from the tray or launch SlopMeter again" }
@@ -155,6 +163,140 @@ Window {
                     onActivated: backend.selectFight(currentValue)
                     visible: backend.fightChoices.length > 1
                     ToolTip.visible: hovered; ToolTip.text: "Last 10 fights · choose Current fight to return to live data"
+                }
+                ColumnLayout {
+                    id: radarSection
+                    objectName: "radarSection"
+                    Layout.fillWidth: true
+                    visible: backend.radarEnabled
+                    spacing: backend.minimalistMode ? 2 : 4
+                    function horizArrow(dir) {
+                        if (dir === "Frente") return "↑ FRENTE"
+                        if (dir === "Atrás") return "↓ ATRÁS"
+                        if (dir === "Izq") return "← IZQ"
+                        if (dir === "Der") return "→ DER"
+                        return "● AQUÍ"
+                    }
+                    function horizColor(dir) {
+                        if (dir === "Frente") return "#54cf82"
+                        if (dir === "Atrás") return "#ff9e9e"
+                        if (dir === "Izq" || dir === "Der") return "#f1c778"
+                        return "#9ad9ec"
+                    }
+                    function vertBadge(vDir, dz) {
+                        const d = Math.round(Math.abs(Number(dz || 0)))
+                        if (vDir === "Arriba") return "▲ ARRIBA +" + d + "m"
+                        if (vDir === "Abajo") return "▼ ABAJO -" + d + "m"
+                        return "• NIVEL"
+                    }
+                    function categoryColor(cat) {
+                        if (cat === "chest") return "#f2c15a"
+                        if (cat === "odyle") return "#6be0ff"
+                        if (cat === "resource") return "#7be35a"
+                        return "#c0cbdc"
+                    }
+                    function categoryIcon(cat) {
+                        if (cat === "chest") return "◈"
+                        if (cat === "odyle") return "✦"
+                        if (cat === "resource") return "❖"
+                        return "○"
+                    }
+                    RowLayout {
+                        Layout.fillWidth: true; spacing: 4
+                        Label {
+                            text: "◎ RADAR"
+                            color: "#54cf82"; font.pixelSize: 10; font.bold: true
+                        }
+                        Item { Layout.fillWidth: true }
+                        Repeater {
+                            model: [
+                                { key: "chest", label: "Cofres", active: backend.radarChests, color: "#f2c15a" },
+                                { key: "odyle", label: "Odyle", active: backend.radarOdyle, color: "#6be0ff" },
+                                { key: "resource", label: "Recursos", active: backend.radarResources, color: "#7be35a" },
+                                { key: "other", label: "Otros", active: backend.radarOther, color: "#c0cbdc" }
+                            ]
+                            delegate: Rectangle {
+                                required property var modelData
+                                objectName: "radarFilter_" + modelData.key
+                                implicitWidth: pillLabel.implicitWidth + 10
+                                implicitHeight: 17; radius: 3
+                                color: modelData.active ? Qt.rgba(40/255, 58/255, 78/255, 0.9) : "transparent"
+                                border.width: 1
+                                border.color: modelData.active ? modelData.color : "#3b495e"
+                                Label {
+                                    id: pillLabel
+                                    anchors.centerIn: parent
+                                    text: modelData.label
+                                    font.pixelSize: 9; font.bold: modelData.active
+                                    color: modelData.active ? modelData.color : "#7e8ea6"
+                                }
+                                TapHandler {
+                                    onTapped: {
+                                        if (modelData.key === "chest") backend.radarChests = !backend.radarChests
+                                        else if (modelData.key === "odyle") backend.radarOdyle = !backend.radarOdyle
+                                        else if (modelData.key === "resource") backend.radarResources = !backend.radarResources
+                                        else if (modelData.key === "other") backend.radarOther = !backend.radarOther
+                                    }
+                                }
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                            }
+                        }
+                    }
+                    Repeater {
+                        id: radarRepeater
+                        model: backend.displayRadar
+                        delegate: Rectangle {
+                            required property var modelData
+                            required property int index
+                            objectName: "radarRow_" + index
+                            Layout.fillWidth: true
+                            implicitHeight: backend.minimalistMode ? 20 : 24
+                            radius: 4
+                            color: backend.minimalistMode ? "transparent" : "#1f2b3d"
+                            border.width: backend.minimalistMode ? 0 : 1
+                            border.color: "#314259"
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: backend.minimalistMode ? 2 : 6
+                                anchors.rightMargin: backend.minimalistMode ? 2 : 6
+                                spacing: 6
+                                Label {
+                                    objectName: "radarHorizLabel"
+                                    text: radarSection.horizArrow(modelData.horizDir)
+                                    color: radarSection.horizColor(modelData.horizDir)
+                                    font.pixelSize: 10; font.bold: true
+                                    Layout.preferredWidth: 58
+                                }
+                                Label {
+                                    objectName: "radarVertLabel"
+                                    text: radarSection.vertBadge(modelData.vertDir, modelData.zDelta)
+                                    color: modelData.vertDir === "Arriba" ? "#9ad9ec" : modelData.vertDir === "Abajo" ? "#f2a6b8" : "#8e9eb5"
+                                    font.pixelSize: 9; font.bold: modelData.vertDir !== "Nivel"
+                                    Layout.preferredWidth: 74
+                                }
+                                Label {
+                                    objectName: "radarTargetName"
+                                    text: radarSection.categoryIcon(modelData.category) + " " + (modelData.name || "Object")
+                                    color: radarSection.categoryColor(modelData.category)
+                                    font.pixelSize: 11; font.bold: true
+                                    Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight
+                                }
+                                Label {
+                                    objectName: "radarDistanceLabel"
+                                    text: Number(modelData.distance || 0).toFixed(0) + "m"
+                                    color: "#ffffff"; font.pixelSize: 11; font.bold: true
+                                    horizontalAlignment: Text.AlignRight
+                                }
+                            }
+                        }
+                    }
+                    Label {
+                        objectName: "radarEmptyLabel"
+                        visible: backend.displayRadar.length === 0
+                        Layout.fillWidth: true
+                        text: "Escaneando mapa… sin objetivos cercanos"
+                        color: "#7e8ea6"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter
+                    }
                 }
                 ColumnLayout {
                     Layout.fillWidth: true; visible: !!backend.boss.entity && !backend.isPvP; spacing: backend.minimalistMode ? 1 : 3

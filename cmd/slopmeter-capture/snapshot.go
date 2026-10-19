@@ -82,6 +82,7 @@ type snapshot struct {
 	Active       bool            `json:"active"`
 	Boss         *bossDisplay    `json:"boss"`
 	HealthStatus string          `json:"healthStatus"`
+	Radar        []radarDisplay  `json:"radar,omitempty"`
 	History      *[]historyEntry `json:"history,omitempty"`
 }
 

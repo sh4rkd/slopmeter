@@ -38,6 +38,12 @@ Window {
             Slider {objectName: "barHeightSlider"; Layout.fillWidth: true; enabled: !backend.minimalistMode; from: 28; to: 80; stepSize: 2; value: backend.barHeight; onMoved: backend.barHeight = Math.round(value)}
             Label {text: "Vertical spacing · " + backend.barSpacing + " px"; color: "#c0cbdc"}
             Slider {objectName: "barSpacingSlider"; Layout.fillWidth: true; from: 0; to: 20; stepSize: 1; value: backend.barSpacing; onMoved: backend.barSpacing = Math.round(value)}
+            Label {text: "Radar / Detector (Cofres y Recursos)"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
+            CheckBox {objectName: "radarEnabledToggle"; palette.windowText: "#e6edf6"; text: "Activar radar minimalista (Frente, Atrás, Izq, Der, Arriba, Abajo)"; checked: backend.radarEnabled; onToggled: backend.radarEnabled = checked}
+            CheckBox {objectName: "radarChestsToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#f2c15a"; text: "Cofres de suministro / Tesoros (Supply Chests)"; checked: backend.radarChests; onToggled: backend.radarChests = checked}
+            CheckBox {objectName: "radarOdyleToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#6be0ff"; text: "Odyle / Odylium / Cristales de Éter"; checked: backend.radarOdyle; onToggled: backend.radarOdyle = checked}
+            CheckBox {objectName: "radarResourcesToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#7be35a"; text: "Recursos (Hierbas, Minerales, Turmalinas, Núcleos, Artefactos)"; checked: backend.radarResources; onToggled: backend.radarResources = checked}
+            CheckBox {objectName: "radarOtherToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#c0cbdc"; text: "Modo Escáner · Otros objetos del mapa no catalogados"; checked: backend.radarOther; onToggled: backend.radarOther = checked}
             Label {text: "Player bar information"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
             Label {text: "Gear score / combat power"; color: "#c0cbdc"}
             ComboBox {

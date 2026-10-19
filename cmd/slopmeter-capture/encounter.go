@@ -67,6 +67,7 @@ type encounter struct {
 	pvpTarget         game.Entity
 	resetBoundary     time.Time
 	metadataRevision  uint64
+	radar             radarState
 	scene             sceneState
 	fightScene        sceneDisplay
 	targetMeters      map[game.Entity]*meter
@@ -466,6 +467,7 @@ func (e *encounter) observe(m aMessage) {
 		e.npcs = make(map[game.Entity]*npcState)
 		e.targets = make(map[game.Entity]*npcState)
 		e.scene = sceneState{}
+		e.radar = radarState{}
 		return
 	}
 	e.sceneMessage(m)
@@ -656,6 +658,7 @@ func (e *encounter) snapshot(i identities, t time.Time) snapshot {
 		}
 	}
 	s.HealthStatus = e.healthStatus(s.Boss)
+	s.Radar = e.radarSnapshot()
 	return s
 }
 

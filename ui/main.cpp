@@ -104,6 +104,12 @@ class Bridge : public QObject {
     Q_PROPERTY(QVariantList detailChoices READ detailChoices NOTIFY detailChanged)
     Q_PROPERTY(bool isPvP READ isPvP NOTIFY pvpChanged)
     Q_PROPERTY(QVariantMap pvpSummary READ pvpSummary NOTIFY pvpChanged)
+    Q_PROPERTY(bool radarEnabled READ radarEnabled WRITE setRadarEnabled NOTIFY radarChanged)
+    Q_PROPERTY(bool radarChests READ radarChests WRITE setRadarChests NOTIFY radarChanged)
+    Q_PROPERTY(bool radarOdyle READ radarOdyle WRITE setRadarOdyle NOTIFY radarChanged)
+    Q_PROPERTY(bool radarResources READ radarResources WRITE setRadarResources NOTIFY radarChanged)
+    Q_PROPERTY(bool radarOther READ radarOther WRITE setRadarOther NOTIFY radarChanged)
+    Q_PROPERTY(QVariantList displayRadar READ displayRadar NOTIFY radarChanged)
     Q_PROPERTY(QVariantMap detailPlayer READ detailPlayer NOTIFY detailChanged)
     Q_PROPERTY(QVariantMap detailFight READ detailFight NOTIFY detailChanged)
     Q_PROPERTY(bool testMode READ testMode WRITE setTestMode NOTIFY testModeChanged)
@@ -155,6 +161,21 @@ public:
     bool minimalistSetting=QSettings().value("appearance/minimalistMode",false).toBool();
     bool minimalistCompactDamageSetting=QSettings().value("appearance/minimalistCompactDamage",true).toBool();
     bool growthSetting=QSettings().value("appearance/growUp",false).toBool();
+    bool radarEnabledSetting=QSettings().value("radar/enabled",false).toBool();
+    bool radarChestsSetting=QSettings().value("radar/chests",true).toBool();
+    bool radarOdyleSetting=QSettings().value("radar/odyle",true).toBool();
+    bool radarResourcesSetting=QSettings().value("radar/resources",true).toBool();
+    bool radarOtherSetting=QSettings().value("radar/other",false).toBool();
+    bool radarEnabled() const {return radarEnabledSetting;}
+    void setRadarEnabled(bool value) {if(radarEnabledSetting==value) return;radarEnabledSetting=value;QSettings().setValue("radar/enabled",value);emit radarChanged();}
+    bool radarChests() const {return radarChestsSetting;}
+    void setRadarChests(bool value) {if(radarChestsSetting==value) return;radarChestsSetting=value;QSettings().setValue("radar/chests",value);emit radarChanged();}
+    bool radarOdyle() const {return radarOdyleSetting;}
+    void setRadarOdyle(bool value) {if(radarOdyleSetting==value) return;radarOdyleSetting=value;QSettings().setValue("radar/odyle",value);emit radarChanged();}
+    bool radarResources() const {return radarResourcesSetting;}
+    void setRadarResources(bool value) {if(radarResourcesSetting==value) return;radarResourcesSetting=value;QSettings().setValue("radar/resources",value);emit radarChanged();}
+    bool radarOther() const {return radarOtherSetting;}
+    void setRadarOther(bool value) {if(radarOtherSetting==value) return;radarOtherSetting=value;QSettings().setValue("radar/other",value);emit radarChanged();}
     bool minimalistMode() const {return minimalistSetting;}
     void setMinimalistMode(bool value) {if(minimalistSetting==value) return;minimalistSetting=value;QSettings().setValue("appearance/minimalistMode",value);emit appearanceChanged();}
     bool minimalistCompactDamage() const {return minimalistCompactDamageSetting;}
@@ -239,7 +260,13 @@ public:
         const double timeLeft=qMax(0.0,300.0-fightDuration);
         QVariantMap previewBoss{{"entity",900100},{"name","Fediv Wraith"},{"hp",currentHP},{"max",maximumHP},
             {"percent",100.0*currentHP/maximumHP},{"eta",eta},{"totalEta",totalEta},{"timeLeft",timeLeft},{"etaKnown",partyDps>0},{"known",true},{"maxKnown",true}};
-        return {{"character","Test party"},{"encounter","Test mode"},{"duration",fightDuration},{"active",true},{"session",0},{"actors",rows},{"boss",previewBoss},{"scene",QVariantMap{{"id",600021},{"name","Fire Temple"},{"instance",1}}}};
+        QVariantList previewRadar{
+            QVariantMap{{"id",501},{"npc",2900100},{"name","Supply Chest"},{"category","chest"},{"distance",18.4},{"zDelta",4.8},{"angle",12.0},{"horizDir","Frente"},{"vertDir","Arriba"},{"hasDir",true}},
+            QVariantMap{{"id",502},{"npc",2920213},{"name","Odylium Ore"},{"category","odyle"},{"distance",26.1},{"zDelta",-3.5},{"angle",82.0},{"horizDir","Der"},{"vertDir","Abajo"},{"hasDir",true}},
+            QVariantMap{{"id",503},{"npc",2101376},{"name","Wildgrass Herb"},{"category","resource"},{"distance",34.0},{"zDelta",0.5},{"angle",-75.0},{"horizDir","Izq"},{"vertDir","Nivel"},{"hasDir",true}},
+            QVariantMap{{"id",504},{"npc",2600078},{"name","Dimensional Core"},{"category","resource"},{"distance",52.3},{"zDelta",-6.0},{"angle",168.0},{"horizDir","Atrás"},{"vertDir","Abajo"},{"hasDir",true}}
+        };
+        return {{"character","Test party"},{"encounter","Test mode"},{"duration",fightDuration},{"active",true},{"session",0},{"actors",rows},{"boss",previewBoss},{"radar",previewRadar},{"scene",QVariantMap{{"id",600021},{"name","Fire Temple"},{"instance",1}}}};
     }
     int widthSetting=QSettings().value("appearance/barWidth",352).toInt();
     int heightSetting=QSettings().value("appearance/barHeight",44).toInt();
@@ -268,7 +295,7 @@ public:
     void setBarHeight(int value) {heightSetting=qBound(28,value,80);QSettings().setValue("appearance/barHeight",heightSetting);emit appearanceChanged();}
     void setBarSpacing(int value) {spacingSetting=qBound(0,value,20);QSettings().setValue("appearance/barSpacing",spacingSetting);emit appearanceChanged();}
     void setShowDetails(bool value) {detailsSetting=value;QSettings().setValue("appearance/showDetails",value);emit appearanceChanged();}
-    Q_INVOKABLE void resetAppearance() {setMinimalistMode(false);setMinimalistCompactDamage(true);setGrowUp(false);setScoreDisplay(1);setShowTotalDamage(true);setRoundedDps(false);setBarWidth(352);setBarHeight(44);setBarSpacing(4);setShowDetails(true);setBackgroundOpacity(75);setOverallOpacity(100);setShowBorder(true);setBarStyle(0);setPollInterval(200);}
+    Q_INVOKABLE void resetAppearance() {setMinimalistMode(false);setMinimalistCompactDamage(true);setGrowUp(false);setScoreDisplay(1);setShowTotalDamage(true);setRoundedDps(false);setBarWidth(352);setBarHeight(44);setBarSpacing(4);setShowDetails(true);setBackgroundOpacity(75);setOverallOpacity(100);setShowBorder(true);setBarStyle(0);setPollInterval(200);setRadarEnabled(false);setRadarChests(true);setRadarOdyle(true);setRadarResources(true);setRadarOther(false);}
     ActorModel actors;
     ActorModel enemies;
     SkillModel skills;
@@ -287,6 +314,7 @@ public:
     QVariantMap bossState;
     bool pvpActive=false;
     QVariantMap pvpState;
+    QVariantList radarRows;
     bool captureReady=false,replayMode=false;
     QString displayMessage="Waiting for AION 2 window…", gameScreen, scriptName;
     QTemporaryFile script;
@@ -296,6 +324,21 @@ public:
     QVariantMap boss() const {return bossState;}
     bool isPvP() const {return pvpActive;}
     QVariantMap pvpSummary() const {return pvpState;}
+    QVariantList displayRadar() const {
+        if(!radarEnabledSetting) return {};
+        QVariantList filtered;
+        for(const auto &val:radarRows) {
+            const auto m=val.toMap();
+            const auto cat=m.value("category").toString();
+            if((cat=="chest" && radarChestsSetting) ||
+               (cat=="odyle" && radarOdyleSetting) ||
+               (cat=="resource" && radarResourcesSetting) ||
+               (cat=="object" && radarOtherSetting)) {
+                filtered.append(m);
+            }
+        }
+        return filtered;
+    }
     QString healthMessage;
     QString bossHealthStatus() const {return previewEnabled?"Test mode: simulated boss HP.":healthMessage;}
     bool captureActive() const {return captureReady;}
@@ -454,6 +497,8 @@ public:
         const bool nextPvp=displayState.value("pvp").toBool();
         const auto nextPvpSummary=displayState.value("pvpSummary").toMap();
         if(nextPvp!=pvpActive||nextPvpSummary!=pvpState) {pvpActive=nextPvp;pvpState=nextPvpSummary;emit pvpChanged();}
+        const auto nextRadar=(!previewEnabled&&!selectedSession?currentState:displayState).value("radar").toList();
+        if(nextRadar!=radarRows) {radarRows=nextRadar;emit radarChanged();}
         actors.update(QJsonArray::fromVariantList(displayPlayers()));
         enemies.update(QJsonArray::fromVariantList(displayEnemies()));
         updateDetail();
@@ -577,7 +622,7 @@ public:
     Q_INVOKABLE void quit() {QCoreApplication::quit();}
 signals:
     void interfacesChanged();
-    void characterNameChanged();void captureChanged();void testModeChanged();void pollingChanged();void historyChanged();void detailChanged();void appearanceChanged();void characterChanged();void statusChanged();void durationChanged();void displayChanged();void encounterChanged();void bossChanged();void pvpChanged();
+    void characterNameChanged();void captureChanged();void testModeChanged();void pollingChanged();void historyChanged();void detailChanged();void appearanceChanged();void characterChanged();void statusChanged();void durationChanged();void displayChanged();void encounterChanged();void bossChanged();void pvpChanged();void radarChanged();
 };
 static void global(void *data,wl_registry*,uint32_t,const char *interface,uint32_t) {if(!std::strcmp(interface,"zwlr_layer_shell_v1")) *static_cast<bool*>(data)=true;}
 static void removed(void*,wl_registry*,uint32_t) {}
@@ -919,8 +964,28 @@ int main(int argc,char **argv) {
         if(!bridge.isPvP()||!pvpHeader||!pvpHeader->isVisible()||!enemySec||!enemySec->isVisible()||bridge.enemies.rowCount()!=1||!pvpTitle||!pvpTitle->property("text").toString().contains("ShadowBlade")||!pvpTitle->property("text").toString().contains("VICTORY")) {app.exit(95);return;}
         bridge.selectPlayer(99);
         if(!bridge.detailPlayer().value("enemy").toBool()||bridge.detailPlayer().value("name").toString()!="ShadowBlade"||bridge.skills.rowCount()!=1) {app.exit(96);return;}
+        // Radar detector & 6-direction filter checks
+        auto radarSec=window->findChild<QQuickItem*>("radarSection");
+        auto radarBtn=window->findChild<QQuickItem*>("radarToggleButton");
+        if(!radarSec||!radarBtn||radarSec->isVisible()||bridge.radarEnabled()) {app.exit(97);return;}
+        bridge.currentState["radar"]=QVariantList{
+            QVariantMap{{"id",501},{"npc",2900100},{"name","Supply Chest"},{"category","chest"},{"distance",18.0},{"zDelta",5.0},{"angle",0.0},{"horizDir","Frente"},{"vertDir","Arriba"},{"hasDir",true}},
+            QVariantMap{{"id",502},{"npc",2920213},{"name","Odylium Ore"},{"category","odyle"},{"distance",24.0},{"zDelta",-4.0},{"angle",90.0},{"horizDir","Der"},{"vertDir","Abajo"},{"hasDir",true}},
+            QVariantMap{{"id",503},{"npc",2101376},{"name","Wildgrass Herb"},{"category","resource"},{"distance",30.0},{"zDelta",0.0},{"angle",-90.0},{"horizDir","Izq"},{"vertDir","Nivel"},{"hasDir",true}},
+            QVariantMap{{"id",504},{"npc",2999999},{"name","Mystery Box"},{"category","object"},{"distance",40.0},{"zDelta",0.0},{"angle",180.0},{"horizDir","Atrás"},{"vertDir","Nivel"},{"hasDir",true}}
+        };
+        bridge.refreshDisplay();
+        if(!QMetaObject::invokeMethod(radarBtn,"clicked")||!bridge.radarEnabled()) {app.exit(97);return;}
+        settle();
+        if(!radarSec->isVisible()||bridge.displayRadar().size()!=3) {app.exit(97);return;}
+        bridge.setRadarChests(false);settle();
+        if(bridge.displayRadar().size()!=2) {app.exit(98);return;}
+        bridge.setRadarOther(true);settle();
+        if(bridge.displayRadar().size()!=3) {app.exit(98);return;}
+        {Bridge restored;if(!restored.radarEnabled()||restored.radarChests()||!restored.radarOther()) {app.exit(98);return;}}
+        bridge.setRadarChests(true);bridge.setRadarOther(false);bridge.setRadarEnabled(false);settle();
         bridge.currentState=stateBeforeScene;bridge.selectedSession=selectionBeforeScene;bridge.refreshDisplay();settle();
-        fprintf(stderr,"Scene metadata, PvP duel mode, enemy split bars and rival detail checks passed.\n");
+        fprintf(stderr,"Scene metadata, PvP duel mode, enemy split bars, rival detail and 6-way radar checks passed.\n");
         auto resetButton=window->findChild<QQuickItem*>("resetDamageButton");
         auto settingsButton=window->findChild<QQuickItem*>("settingsButton");
  auto minimizeButton=window->findChild<QQuickItem*>("minimizeButton");
