@@ -569,7 +569,7 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 		}
 	}
 
-	if m.opcode == 0x3640 || m.opcode == 0x3641 {
+	if m.opcode == 0x3640 || m.opcode == 0x3641 || m.opcode == 0x3646 || m.opcode == 0x3647 || m.opcode == 0x3649 || m.opcode == 0x364A {
 		e.observeRadarSpawn(m.t, m.opcode, m.payload)
 	}
 }
