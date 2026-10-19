@@ -170,57 +170,105 @@ Window {
                     Layout.fillWidth: true
                     visible: backend.radarEnabled
                     spacing: backend.minimalistMode ? 2 : 4
+                    property int selectedRadarId: 0
+                    property real radarRangeMeters: 70.0
+                    property string activeSubmenu: ""
+                    function selectedTarget() {
+                        const rows = backend.displayRadar
+                        if (!rows || rows.length === 0) return null
+                        if (selectedRadarId !== 0) {
+                            for (let i = 0; i < rows.length; ++i) {
+                                if (Number(rows[i].id) === selectedRadarId) return rows[i]
+                            }
+                        }
+                        return rows[0]
+                    }
                     function horizArrow(dir) {
                         if (dir === "Frente") return "↑ FRENTE"
                         if (dir === "Atrás") return "↓ ATRÁS"
                         if (dir === "Izq") return "← IZQ"
                         if (dir === "Der") return "→ DER"
-                        return "● AQUÍ"
-                    }
-                    function horizColor(dir) {
-                        if (dir === "Frente") return "#54cf82"
-                        if (dir === "Atrás") return "#ff9e9e"
-                        if (dir === "Izq" || dir === "Der") return "#f1c778"
-                        return "#9ad9ec"
+                        return "● CENTRO"
                     }
                     function vertBadge(vDir, dz) {
                         const d = Math.round(Math.abs(Number(dz || 0)))
-                        if (vDir === "Arriba") return "▲ ARRIBA +" + d + "m"
-                        if (vDir === "Abajo") return "▼ ABAJO -" + d + "m"
-                        return "• NIVEL"
+                        if (vDir === "Arriba") return "▲ ARRIBA (+" + d + "m)"
+                        if (vDir === "Abajo") return "▼ ABAJO (-" + d + "m)"
+                        return "• MISMO NIVEL (" + (Number(dz || 0) >= 0 ? "+" : "") + d + "m)"
+                    }
+                    function vertShort(vDir) {
+                        if (vDir === "Arriba") return "▲"
+                        if (vDir === "Abajo") return "▼"
+                        return ""
                     }
                     function categoryColor(cat) {
                         if (cat === "chest") return "#f2c15a"
                         if (cat === "odyle") return "#6be0ff"
-                        if (cat === "resource") return "#7be35a"
+                        if (cat === "gem") return "#e082ff"
+                        if (cat === "ore") return "#ff9f5a"
+                        if (cat === "herb") return "#7be35a"
+                        if (cat === "wood") return "#c89b6e"
                         return "#c0cbdc"
                     }
                     function categoryIcon(cat) {
                         if (cat === "chest") return "◈"
                         if (cat === "odyle") return "✦"
-                        if (cat === "resource") return "❖"
+                        if (cat === "gem") return "◆"
+                        if (cat === "ore") return "⬡"
+                        if (cat === "herb") return "❖"
+                        if (cat === "wood") return "▤"
                         return "○"
                     }
+                    function subItemsFor(catKey) {
+                        if (catKey === "gem") return ["Sapphire Gemstone", "Ruby Gemstone", "Diamond Gemstone"]
+                        if (catKey === "ore") return ["Orichalcum Ore"]
+                        if (catKey === "herb") return ["Azpha", "Calendula", "Pujery", "Conide", "Ohkra", "Morfa", "Raydam", "Aria", "Targena", "Mela", "Coriolus", "Inina", "Cypri", "Kukuru"]
+                        if (catKey === "wood") return ["Asvata Log", "Yggdrasil Log"]
+                        if (catKey === "odyle") return ["Odyle"]
+                        if (catKey === "chest") return ["Hidden Cube"]
+                        return []
+                    }
                     RowLayout {
-                        Layout.fillWidth: true; spacing: 4
+                        Layout.fillWidth: true; spacing: 3
                         Label {
-                            text: "◎ RADAR"
+                            text: "◎ MAPA"
                             color: "#54cf82"; font.pixelSize: 10; font.bold: true
+                        }
+                        Rectangle {
+                            implicitWidth: rangeLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
+                            color: "#1f2b3d"; border.width: 1; border.color: "#384b66"
+                            Label {
+                                id: rangeLbl; anchors.centerIn: parent
+                                text: Math.round(radarSection.radarRangeMeters) + "m"
+                                color: "#9ad9ec"; font.pixelSize: 9; font.bold: true
+                            }
+                            TapHandler {
+                                onTapped: {
+                                    if (radarSection.radarRangeMeters <= 40) radarSection.radarRangeMeters = 70
+                                    else if (radarSection.radarRangeMeters <= 70) radarSection.radarRangeMeters = 120
+                                    else radarSection.radarRangeMeters = 40
+                                }
+                            }
+                            HoverHandler { id: rangeHover; cursorShape: Qt.PointingHandCursor }
+                            ToolTip.visible: rangeHover.hovered; ToolTip.text: "Cambiar zoom del radar (40m / 70m / 120m)"
                         }
                         Item { Layout.fillWidth: true }
                         Repeater {
                             model: [
-                                { key: "chest", label: "Cubos/Cofres", active: backend.radarChests, color: "#f2c15a" },
+                                { key: "chest", label: "Cubo", active: backend.radarChests, color: "#f2c15a" },
                                 { key: "odyle", label: "Odyle", active: backend.radarOdyle, color: "#6be0ff" },
-                                { key: "resource", label: "Recursos", active: backend.radarResources, color: "#7be35a" },
+                                { key: "gem", label: "Gemas", active: backend.radarGems, color: "#e082ff" },
+                                { key: "ore", label: "Mineral", active: backend.radarOres, color: "#ff9f5a" },
+                                { key: "herb", label: "Hierbas", active: backend.radarHerbs, color: "#7be35a" },
+                                { key: "wood", label: "Madera", active: backend.radarWood, color: "#c89b6e" },
                                 { key: "other", label: "Otros", active: backend.radarOther, color: "#c0cbdc" }
                             ]
                             delegate: Rectangle {
                                 required property var modelData
                                 objectName: "radarFilter_" + modelData.key
-                                implicitWidth: pillLabel.implicitWidth + 10
+                                implicitWidth: pillLabel.implicitWidth + 8
                                 implicitHeight: 17; radius: 3
-                                color: modelData.active ? Qt.rgba(40/255, 58/255, 78/255, 0.9) : "transparent"
+                                color: modelData.active ? Qt.rgba(40/255, 58/255, 78/255, 0.92) : "transparent"
                                 border.width: 1
                                 border.color: modelData.active ? modelData.color : "#3b495e"
                                 Label {
@@ -231,71 +279,280 @@ Window {
                                     color: modelData.active ? modelData.color : "#7e8ea6"
                                 }
                                 TapHandler {
-                                    onTapped: {
+                                    acceptedButtons: Qt.LeftButton | Qt.RightButton
+                                    onTapped: function(eventPoint, button) {
+                                        if (button === Qt.RightButton) {
+                                            radarSection.activeSubmenu = (radarSection.activeSubmenu === modelData.key) ? "" : modelData.key
+                                            return
+                                        }
                                         if (modelData.key === "chest") backend.radarChests = !backend.radarChests
                                         else if (modelData.key === "odyle") backend.radarOdyle = !backend.radarOdyle
-                                        else if (modelData.key === "resource") backend.radarResources = !backend.radarResources
+                                        else if (modelData.key === "gem") backend.radarGems = !backend.radarGems
+                                        else if (modelData.key === "ore") backend.radarOres = !backend.radarOres
+                                        else if (modelData.key === "herb") backend.radarHerbs = !backend.radarHerbs
+                                        else if (modelData.key === "wood") backend.radarWood = !backend.radarWood
                                         else if (modelData.key === "other") backend.radarOther = !backend.radarOther
+                                        if (radarSection.subItemsFor(modelData.key).length > 1) {
+                                            radarSection.activeSubmenu = modelData.key
+                                        }
                                     }
                                 }
                                 HoverHandler { cursorShape: Qt.PointingHandCursor }
                             }
                         }
                     }
-                    Repeater {
-                        id: radarRepeater
-                        model: backend.displayRadar
-                        delegate: Rectangle {
-                            required property var modelData
-                            required property int index
-                            objectName: "radarRow_" + index
-                            Layout.fillWidth: true
-                            implicitHeight: backend.minimalistMode ? 20 : 24
-                            radius: 4
-                            color: backend.minimalistMode ? "transparent" : "#1f2b3d"
-                            border.width: backend.minimalistMode ? 0 : 1
-                            border.color: "#314259"
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: backend.minimalistMode ? 2 : 6
-                                anchors.rightMargin: backend.minimalistMode ? 2 : 6
-                                spacing: 6
+                    Flow {
+                        id: subFilterFlow
+                        objectName: "radarSubFilterBar"
+                        Layout.fillWidth: true
+                        spacing: 3
+                        visible: radarSection.activeSubmenu !== "" || backend.radarItemFilter !== ""
+                        Rectangle {
+                            implicitWidth: allSubLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
+                            color: backend.radarItemFilter === "" ? "#2b4257" : "transparent"
+                            border.width: 1; border.color: backend.radarItemFilter === "" ? "#9ad9ec" : "#3b495e"
+                            Label {
+                                id: allSubLbl; anchors.centerIn: parent
+                                text: "Todos"
+                                font.pixelSize: 9; font.bold: backend.radarItemFilter === ""
+                                color: backend.radarItemFilter === "" ? "#ffffff" : "#8e9eb5"
+                            }
+                            TapHandler { onTapped: { backend.radarItemFilter = ""; radarSection.activeSubmenu = "" } }
+                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                        }
+                        Repeater {
+                            model: radarSection.activeSubmenu !== "" ? radarSection.subItemsFor(radarSection.activeSubmenu) : (backend.radarItemFilter !== "" ? [backend.radarItemFilter] : [])
+                            delegate: Rectangle {
+                                required property string modelData
+                                implicitWidth: subItemLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
+                                property bool selected: backend.radarItemFilter === modelData
+                                color: selected ? "#2b4257" : "#182230"
+                                border.width: 1; border.color: selected ? "#54cf82" : "#35465c"
                                 Label {
-                                    objectName: "radarHorizLabel"
-                                    text: radarSection.horizArrow(modelData.horizDir)
-                                    color: radarSection.horizColor(modelData.horizDir)
-                                    font.pixelSize: 10; font.bold: true
-                                    Layout.preferredWidth: 58
+                                    id: subItemLbl; anchors.centerIn: parent
+                                    text: modelData.replace(" Gemstone", "").replace(" Ore", "").replace(" Log", "")
+                                    font.pixelSize: 9; font.bold: parent.selected
+                                    color: parent.selected ? "#54cf82" : "#c0cbdc"
                                 }
-                                Label {
-                                    objectName: "radarVertLabel"
-                                    text: radarSection.vertBadge(modelData.vertDir, modelData.zDelta)
-                                    color: modelData.vertDir === "Arriba" ? "#9ad9ec" : modelData.vertDir === "Abajo" ? "#f2a6b8" : "#8e9eb5"
-                                    font.pixelSize: 9; font.bold: modelData.vertDir !== "Nivel"
-                                    Layout.preferredWidth: 74
+                                TapHandler {
+                                    onTapped: backend.radarItemFilter = (backend.radarItemFilter === modelData ? "" : modelData)
                                 }
-                                Label {
-                                    objectName: "radarTargetName"
-                                    text: radarSection.categoryIcon(modelData.category) + " " + (modelData.name || "Object")
-                                    color: radarSection.categoryColor(modelData.category)
-                                    font.pixelSize: 11; font.bold: true
-                                    Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight
-                                }
-                                Label {
-                                    objectName: "radarDistanceLabel"
-                                    text: Number(modelData.distance || 0).toFixed(0) + "m"
-                                    color: "#ffffff"; font.pixelSize: 11; font.bold: true
-                                    horizontalAlignment: Text.AlignRight
-                                }
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
                             }
                         }
                     }
-                    Label {
-                        objectName: "radarEmptyLabel"
-                        visible: backend.displayRadar.length === 0
+                    RowLayout {
                         Layout.fillWidth: true
-                        text: "Escaneando mapa… sin objetivos cercanos"
-                        color: "#7e8ea6"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter
+                        spacing: 8
+                        Item {
+                            id: radarMapContainer
+                            objectName: "radarMapCanvas"
+                            Layout.preferredWidth: backend.minimalistMode ? 112 : 128
+                            Layout.preferredHeight: Layout.preferredWidth
+                            property real radiusPx: width / 2
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: width / 2
+                                color: backend.minimalistMode ? Qt.rgba(16/255, 24/255, 36/255, 0.72) : "#131c29"
+                                border.width: 1.5
+                                border.color: "#354963"
+                            }
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: parent.width * 0.66; height: width; radius: width / 2
+                                color: "transparent"; border.width: 1; border.color: "#223147"
+                            }
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: parent.width * 0.33; height: width; radius: width / 2
+                                color: "transparent"; border.width: 1; border.color: "#223147"
+                            }
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: parent.width - 6; height: 1
+                                color: "#223147"
+                            }
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 1; height: parent.height - 6
+                                color: "#223147"
+                            }
+                            Label { anchors.top: parent.top; anchors.topMargin: 2; anchors.horizontalCenter: parent.horizontalCenter; text: "F"; color: "#54cf82"; font.pixelSize: 8; font.bold: true }
+                            Label { anchors.bottom: parent.bottom; anchors.bottomMargin: 2; anchors.horizontalCenter: parent.horizontalCenter; text: "A"; color: "#7e8ea6"; font.pixelSize: 8 }
+                            Label { anchors.left: parent.left; anchors.leftMargin: 4; anchors.verticalCenter: parent.verticalCenter; text: "I"; color: "#7e8ea6"; font.pixelSize: 8 }
+                            Label { anchors.right: parent.right; anchors.rightMargin: 4; anchors.verticalCenter: parent.verticalCenter; text: "D"; color: "#7e8ea6"; font.pixelSize: 8 }
+                            Rectangle {
+                                id: playerCenterMarker
+                                objectName: "radarPlayerCenter"
+                                width: 8; height: 8; radius: 4
+                                anchors.centerIn: parent
+                                color: "#ffffff"
+                                border.width: 1.5; border.color: "#54cf82"
+                                z: 5
+                            }
+                            Repeater {
+                                id: radarMapDots
+                                model: backend.displayRadar
+                                delegate: Item {
+                                    required property var modelData
+                                    required property int index
+                                    objectName: "radarDot_" + index
+                                    property real rx: Number(modelData.relX || 0)
+                                    property real ry: Number(modelData.relY || 0)
+                                    property real dist: Math.hypot(rx, ry)
+                                    property real maxR: radarMapContainer.radiusPx - 10
+                                    property real scaleFactor: dist > 0.001 ? Math.min(1.0, dist / radarSection.radarRangeMeters) * maxR / dist : 0.0
+                                    property bool isSelected: {
+                                        const sel = radarSection.selectedTarget()
+                                        return sel !== null && Number(sel.id) === Number(modelData.id)
+                                    }
+                                    x: radarMapContainer.radiusPx + rx * scaleFactor - width / 2
+                                    y: radarMapContainer.radiusPx - ry * scaleFactor - height / 2
+                                    width: isSelected ? 16 : 12
+                                    height: isSelected ? 16 : 12
+                                    z: isSelected ? 10 : (100 - index)
+                                    Rectangle {
+                                        anchors.centerIn: parent
+                                        width: parent.isSelected ? 12 : 9
+                                        height: width
+                                        radius: width / 2
+                                        color: radarSection.categoryColor(modelData.category)
+                                        border.width: parent.isSelected ? 2 : 1
+                                        border.color: parent.isSelected ? "#ffffff" : "#101824"
+                                    }
+                                    Label {
+                                        anchors.centerIn: parent
+                                        text: radarSection.vertShort(modelData.vertDir)
+                                        color: "#101824"
+                                        font.pixelSize: 7; font.bold: true
+                                    }
+                                    TapHandler {
+                                        onTapped: radarSection.selectedRadarId = Number(modelData.id)
+                                    }
+                                    HoverHandler { id: dotHover; cursorShape: Qt.PointingHandCursor }
+                                    ToolTip.visible: dotHover.hovered
+                                    ToolTip.text: (modelData.name || "Resource") + " · " + Number(modelData.distance || 0).toFixed(0) + "m · " + radarSection.vertBadge(modelData.vertDir, modelData.zDelta)
+                                }
+                            }
+                        }
+                        ColumnLayout {
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignVCenter
+                            spacing: 4
+                            Rectangle {
+                                id: selectedRadarCard
+                                objectName: "selectedRadarCard"
+                                visible: radarSection.selectedTarget() !== null
+                                Layout.fillWidth: true
+                                implicitHeight: selectedCol.implicitHeight + 10
+                                radius: 4
+                                color: backend.minimalistMode ? Qt.rgba(25/255, 36/255, 52/255, 0.85) : "#1f2b3d"
+                                border.width: 1
+                                border.color: radarSection.selectedTarget() ? radarSection.categoryColor(radarSection.selectedTarget().category) : "#314259"
+                                ColumnLayout {
+                                    id: selectedCol
+                                    anchors.fill: parent; anchors.margins: 5; spacing: 2
+                                    RowLayout {
+                                        Layout.fillWidth: true; spacing: 4
+                                        Label {
+                                            objectName: "radarSelectedName"
+                                            text: {
+                                                const t = radarSection.selectedTarget()
+                                                return t ? (radarSection.categoryIcon(t.category) + " " + (t.name || "Object")) : ""
+                                            }
+                                            color: {
+                                                const t = radarSection.selectedTarget()
+                                                return t ? radarSection.categoryColor(t.category) : "#ffffff"
+                                            }
+                                            font.pixelSize: 11; font.bold: true
+                                            Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            objectName: "radarSelectedDistance"
+                                            text: {
+                                                const t = radarSection.selectedTarget()
+                                                return t ? (Number(t.distance || 0).toFixed(0) + "m") : ""
+                                            }
+                                            color: "#ffffff"; font.pixelSize: 11; font.bold: true
+                                        }
+                                    }
+                                    Rectangle {
+                                        Layout.fillWidth: true; implicitHeight: 20; radius: 3
+                                        color: {
+                                            const t = radarSection.selectedTarget()
+                                            if (!t) return "#182230"
+                                            return t.vertDir === "Arriba" ? "#1c3b4d" : t.vertDir === "Abajo" ? "#422332" : "#223042"
+                                        }
+                                        RowLayout {
+                                            anchors.fill: parent; anchors.leftMargin: 5; anchors.rightMargin: 5; spacing: 4
+                                            Label {
+                                                objectName: "radarSelectedVert"
+                                                text: {
+                                                    const t = radarSection.selectedTarget()
+                                                    return t ? radarSection.vertBadge(t.vertDir, t.zDelta) : ""
+                                                }
+                                                color: {
+                                                    const t = radarSection.selectedTarget()
+                                                    if (!t) return "#8e9eb5"
+                                                    return t.vertDir === "Arriba" ? "#6be0ff" : t.vertDir === "Abajo" ? "#ff9e9e" : "#54cf82"
+                                                }
+                                                font.pixelSize: 10; font.bold: true
+                                                Layout.fillWidth: true; elide: Text.ElideRight
+                                            }
+                                            Label {
+                                                objectName: "radarSelectedHoriz"
+                                                text: {
+                                                    const t = radarSection.selectedTarget()
+                                                    return t ? radarSection.horizArrow(t.horizDir) : ""
+                                                }
+                                                color: "#c0cbdc"; font.pixelSize: 9; font.bold: true
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            Repeater {
+                                id: radarQuickList
+                                model: Math.min(3, backend.displayRadar.length)
+                                delegate: Rectangle {
+                                    required property int index
+                                    property var itemData: backend.displayRadar[index]
+                                    property bool isCurrent: {
+                                        const sel = radarSection.selectedTarget()
+                                        return sel && itemData && Number(sel.id) === Number(itemData.id)
+                                    }
+                                    objectName: "radarRow_" + index
+                                    Layout.fillWidth: true; implicitHeight: 18; radius: 3
+                                    color: isCurrent ? "#283952" : (backend.minimalistMode ? "transparent" : "#182230")
+                                    border.width: isCurrent ? 1 : 0
+                                    border.color: itemData ? radarSection.categoryColor(itemData.category) : "transparent"
+                                    RowLayout {
+                                        anchors.fill: parent; anchors.leftMargin: 4; anchors.rightMargin: 4; spacing: 4
+                                        Label {
+                                            text: itemData ? (radarSection.categoryIcon(itemData.category) + " " + (itemData.name || "Object")) : ""
+                                            color: itemData ? radarSection.categoryColor(itemData.category) : "#c0cbdc"
+                                            font.pixelSize: 9; font.bold: parent.parent.isCurrent
+                                            Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight
+                                        }
+                                        Label {
+                                            text: itemData ? (radarSection.vertShort(itemData.vertDir) + " " + Number(itemData.distance || 0).toFixed(0) + "m") : ""
+                                            color: "#e6edf6"; font.pixelSize: 9; font.bold: true
+                                        }
+                                    }
+                                    TapHandler {
+                                        onTapped: if (itemData) radarSection.selectedRadarId = Number(itemData.id)
+                                    }
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                }
+                            }
+                            Label {
+                                objectName: "radarEmptyLabel"
+                                visible: backend.displayRadar.length === 0
+                                Layout.fillWidth: true
+                                text: "Escaneando mapa…\nsin objetivos en rango"
+                                color: "#7e8ea6"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter
+                            }
+                        }
                     }
                 }
                 ColumnLayout {

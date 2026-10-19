@@ -107,8 +107,13 @@ class Bridge : public QObject {
     Q_PROPERTY(bool radarEnabled READ radarEnabled WRITE setRadarEnabled NOTIFY radarChanged)
     Q_PROPERTY(bool radarChests READ radarChests WRITE setRadarChests NOTIFY radarChanged)
     Q_PROPERTY(bool radarOdyle READ radarOdyle WRITE setRadarOdyle NOTIFY radarChanged)
+    Q_PROPERTY(bool radarGems READ radarGems WRITE setRadarGems NOTIFY radarChanged)
+    Q_PROPERTY(bool radarOres READ radarOres WRITE setRadarOres NOTIFY radarChanged)
+    Q_PROPERTY(bool radarHerbs READ radarHerbs WRITE setRadarHerbs NOTIFY radarChanged)
+    Q_PROPERTY(bool radarWood READ radarWood WRITE setRadarWood NOTIFY radarChanged)
     Q_PROPERTY(bool radarResources READ radarResources WRITE setRadarResources NOTIFY radarChanged)
     Q_PROPERTY(bool radarOther READ radarOther WRITE setRadarOther NOTIFY radarChanged)
+    Q_PROPERTY(QString radarItemFilter READ radarItemFilter WRITE setRadarItemFilter NOTIFY radarChanged)
     Q_PROPERTY(QVariantList displayRadar READ displayRadar NOTIFY radarChanged)
     Q_PROPERTY(QVariantMap detailPlayer READ detailPlayer NOTIFY detailChanged)
     Q_PROPERTY(QVariantMap detailFight READ detailFight NOTIFY detailChanged)
@@ -164,18 +169,32 @@ public:
     bool radarEnabledSetting=QSettings().value("radar/enabled",false).toBool();
     bool radarChestsSetting=QSettings().value("radar/chests",true).toBool();
     bool radarOdyleSetting=QSettings().value("radar/odyle",true).toBool();
-    bool radarResourcesSetting=QSettings().value("radar/resources",true).toBool();
+    bool radarGemsSetting=QSettings().value("radar/gems",true).toBool();
+    bool radarOresSetting=QSettings().value("radar/ores",true).toBool();
+    bool radarHerbsSetting=QSettings().value("radar/herbs",true).toBool();
+    bool radarWoodSetting=QSettings().value("radar/wood",true).toBool();
     bool radarOtherSetting=QSettings().value("radar/other",false).toBool();
+    QString radarItemFilterSetting=QSettings().value("radar/itemFilter",QString()).toString();
     bool radarEnabled() const {return radarEnabledSetting;}
     void setRadarEnabled(bool value) {if(radarEnabledSetting==value) return;radarEnabledSetting=value;QSettings().setValue("radar/enabled",value);emit radarChanged();}
     bool radarChests() const {return radarChestsSetting;}
     void setRadarChests(bool value) {if(radarChestsSetting==value) return;radarChestsSetting=value;QSettings().setValue("radar/chests",value);emit radarChanged();}
     bool radarOdyle() const {return radarOdyleSetting;}
     void setRadarOdyle(bool value) {if(radarOdyleSetting==value) return;radarOdyleSetting=value;QSettings().setValue("radar/odyle",value);emit radarChanged();}
-    bool radarResources() const {return radarResourcesSetting;}
-    void setRadarResources(bool value) {if(radarResourcesSetting==value) return;radarResourcesSetting=value;QSettings().setValue("radar/resources",value);emit radarChanged();}
+    bool radarGems() const {return radarGemsSetting;}
+    void setRadarGems(bool value) {if(radarGemsSetting==value) return;radarGemsSetting=value;QSettings().setValue("radar/gems",value);emit radarChanged();}
+    bool radarOres() const {return radarOresSetting;}
+    void setRadarOres(bool value) {if(radarOresSetting==value) return;radarOresSetting=value;QSettings().setValue("radar/ores",value);emit radarChanged();}
+    bool radarHerbs() const {return radarHerbsSetting;}
+    void setRadarHerbs(bool value) {if(radarHerbsSetting==value) return;radarHerbsSetting=value;QSettings().setValue("radar/herbs",value);emit radarChanged();}
+    bool radarWood() const {return radarWoodSetting;}
+    void setRadarWood(bool value) {if(radarWoodSetting==value) return;radarWoodSetting=value;QSettings().setValue("radar/wood",value);emit radarChanged();}
+    bool radarResources() const {return radarGemsSetting||radarOresSetting||radarHerbsSetting||radarWoodSetting;}
+    void setRadarResources(bool value) {setRadarGems(value);setRadarOres(value);setRadarHerbs(value);setRadarWood(value);}
     bool radarOther() const {return radarOtherSetting;}
     void setRadarOther(bool value) {if(radarOtherSetting==value) return;radarOtherSetting=value;QSettings().setValue("radar/other",value);emit radarChanged();}
+    QString radarItemFilter() const {return radarItemFilterSetting;}
+    void setRadarItemFilter(const QString &value) {if(radarItemFilterSetting==value) return;radarItemFilterSetting=value;QSettings().setValue("radar/itemFilter",value);emit radarChanged();}
     bool minimalistMode() const {return minimalistSetting;}
     void setMinimalistMode(bool value) {if(minimalistSetting==value) return;minimalistSetting=value;QSettings().setValue("appearance/minimalistMode",value);emit appearanceChanged();}
     bool minimalistCompactDamage() const {return minimalistCompactDamageSetting;}
@@ -261,10 +280,12 @@ public:
         QVariantMap previewBoss{{"entity",900100},{"name","Fediv Wraith"},{"hp",currentHP},{"max",maximumHP},
             {"percent",100.0*currentHP/maximumHP},{"eta",eta},{"totalEta",totalEta},{"timeLeft",timeLeft},{"etaKnown",partyDps>0},{"known",true},{"maxKnown",true}};
         QVariantList previewRadar{
-            QVariantMap{{"id",501},{"npc",1200039},{"name","Hidden Cube"},{"category","chest"},{"distance",18.4},{"zDelta",4.8},{"angle",12.0},{"horizDir","Frente"},{"vertDir","Arriba"},{"hasDir",true}},
-            QVariantMap{{"id",502},{"npc",1080001},{"name","Odyle"},{"category","odyle"},{"distance",26.1},{"zDelta",-3.5},{"angle",82.0},{"horizDir","Der"},{"vertDir","Abajo"},{"hasDir",true}},
-            QVariantMap{{"id",503},{"npc",1080101},{"name","Orichalcum Ore"},{"category","resource"},{"distance",34.0},{"zDelta",0.5},{"angle",-75.0},{"horizDir","Izq"},{"vertDir","Nivel"},{"hasDir",true}},
-            QVariantMap{{"id",504},{"npc",1080601},{"name","Aria Herb"},{"category","resource"},{"distance",52.3},{"zDelta",-6.0},{"angle",168.0},{"horizDir","Atrás"},{"vertDir","Abajo"},{"hasDir",true}}
+            QVariantMap{{"id",501},{"npc",1200039},{"name","Hidden Cube"},{"category","chest"},{"distance",18.4},{"zDelta",4.8},{"angle",12.0},{"relX",3.8},{"relY",18.0},{"horizDir","Frente"},{"vertDir","Arriba"},{"hasDir",true}},
+            QVariantMap{{"id",502},{"npc",1080001},{"name","Odyle"},{"category","odyle"},{"distance",26.1},{"zDelta",-3.5},{"angle",82.0},{"relX",25.8},{"relY",3.6},{"horizDir","Der"},{"vertDir","Abajo"},{"hasDir",true}},
+            QVariantMap{{"id",503},{"npc",1080501},{"name","Sapphire Gemstone"},{"category","gem"},{"distance",22.0},{"zDelta",3.2},{"angle",-35.0},{"relX",-12.6},{"relY",18.0},{"horizDir","Frente"},{"vertDir","Arriba"},{"hasDir",true}},
+            QVariantMap{{"id",504},{"npc",1080101},{"name","Orichalcum Ore"},{"category","ore"},{"distance",34.0},{"zDelta",0.5},{"angle",-75.0},{"relX",-32.8},{"relY",8.8},{"horizDir","Izq"},{"vertDir","Nivel"},{"hasDir",true}},
+            QVariantMap{{"id",505},{"npc",1090601},{"name","Azpha"},{"category","herb"},{"distance",45.0},{"zDelta",-5.0},{"angle",155.0},{"relX",19.0},{"relY",-40.8},{"horizDir","Atrás"},{"vertDir","Abajo"},{"hasDir",true}},
+            QVariantMap{{"id",506},{"npc",1090201},{"name","Asvata Log"},{"category","wood"},{"distance",38.5},{"zDelta",1.0},{"angle",-130.0},{"relX",-29.5},{"relY",-24.7},{"horizDir","Izq"},{"vertDir","Nivel"},{"hasDir",true}}
         };
         return {{"character","Test party"},{"encounter","Test mode"},{"duration",fightDuration},{"active",true},{"session",0},{"actors",rows},{"boss",previewBoss},{"radar",previewRadar},{"scene",QVariantMap{{"id",600021},{"name","Fire Temple"},{"instance",1}}}};
     }
@@ -295,7 +316,7 @@ public:
     void setBarHeight(int value) {heightSetting=qBound(28,value,80);QSettings().setValue("appearance/barHeight",heightSetting);emit appearanceChanged();}
     void setBarSpacing(int value) {spacingSetting=qBound(0,value,20);QSettings().setValue("appearance/barSpacing",spacingSetting);emit appearanceChanged();}
     void setShowDetails(bool value) {detailsSetting=value;QSettings().setValue("appearance/showDetails",value);emit appearanceChanged();}
-    Q_INVOKABLE void resetAppearance() {setMinimalistMode(false);setMinimalistCompactDamage(true);setGrowUp(false);setScoreDisplay(1);setShowTotalDamage(true);setRoundedDps(false);setBarWidth(352);setBarHeight(44);setBarSpacing(4);setShowDetails(true);setBackgroundOpacity(75);setOverallOpacity(100);setShowBorder(true);setBarStyle(0);setPollInterval(200);setRadarEnabled(false);setRadarChests(true);setRadarOdyle(true);setRadarResources(true);setRadarOther(false);}
+    Q_INVOKABLE void resetAppearance() {setMinimalistMode(false);setMinimalistCompactDamage(true);setGrowUp(false);setScoreDisplay(1);setShowTotalDamage(true);setRoundedDps(false);setBarWidth(352);setBarHeight(44);setBarSpacing(4);setShowDetails(true);setBackgroundOpacity(75);setOverallOpacity(100);setShowBorder(true);setBarStyle(0);setPollInterval(200);setRadarEnabled(false);setRadarChests(true);setRadarOdyle(true);setRadarGems(true);setRadarOres(true);setRadarHerbs(true);setRadarWood(true);setRadarOther(false);setRadarItemFilter(QString());}
     ActorModel actors;
     ActorModel enemies;
     SkillModel skills;
@@ -330,12 +351,19 @@ public:
         for(const auto &val:radarRows) {
             const auto m=val.toMap();
             const auto cat=m.value("category").toString();
-            if((cat=="chest" && radarChestsSetting) ||
-               (cat=="odyle" && radarOdyleSetting) ||
-               (cat=="resource" && radarResourcesSetting) ||
-               (cat=="object" && radarOtherSetting)) {
-                filtered.append(m);
-            }
+            const auto name=m.value("name").toString();
+            const bool catMatch =
+                (cat=="chest" && radarChestsSetting) ||
+                (cat=="odyle" && radarOdyleSetting) ||
+                (cat=="gem" && radarGemsSetting) ||
+                (cat=="ore" && radarOresSetting) ||
+                (cat=="herb" && radarHerbsSetting) ||
+                (cat=="wood" && radarWoodSetting) ||
+                (cat=="resource" && radarResources()) ||
+                (cat=="object" && radarOtherSetting);
+            if(!catMatch) continue;
+            if(!radarItemFilterSetting.isEmpty() && !name.contains(radarItemFilterSetting, Qt::CaseInsensitive)) continue;
+            filtered.append(m);
         }
         return filtered;
     }
@@ -964,26 +992,39 @@ int main(int argc,char **argv) {
         if(!bridge.isPvP()||!pvpHeader||!pvpHeader->isVisible()||!enemySec||!enemySec->isVisible()||bridge.enemies.rowCount()!=1||!pvpTitle||!pvpTitle->property("text").toString().contains("ShadowBlade")||!pvpTitle->property("text").toString().contains("VICTORY")) {app.exit(95);return;}
         bridge.selectPlayer(99);
         if(!bridge.detailPlayer().value("enemy").toBool()||bridge.detailPlayer().value("name").toString()!="ShadowBlade"||bridge.skills.rowCount()!=1) {app.exit(96);return;}
-        // Radar detector & 6-direction filter checks
+        // Radar 2D map, subcategories & elevation callout checks
         auto radarSec=window->findChild<QQuickItem*>("radarSection");
         auto radarBtn=window->findChild<QQuickItem*>("radarToggleButton");
-        if(!radarSec||!radarBtn||radarSec->isVisible()||bridge.radarEnabled()) {app.exit(97);return;}
+        auto radarMap=window->findChild<QQuickItem*>("radarMapCanvas");
+        auto radarCenter=window->findChild<QQuickItem*>("radarPlayerCenter");
+        auto radarSelName=window->findChild<QObject*>("radarSelectedName");
+        auto radarSelVert=window->findChild<QObject*>("radarSelectedVert");
+        if(!radarSec||!radarBtn||!radarMap||!radarCenter||!radarSelName||!radarSelVert||radarSec->isVisible()||bridge.radarEnabled()) {app.exit(97);return;}
         bridge.currentState["radar"]=QVariantList{
-            QVariantMap{{"id",501},{"npc",2900100},{"name","Supply Chest"},{"category","chest"},{"distance",18.0},{"zDelta",5.0},{"angle",0.0},{"horizDir","Frente"},{"vertDir","Arriba"},{"hasDir",true}},
-            QVariantMap{{"id",502},{"npc",2920213},{"name","Odylium Ore"},{"category","odyle"},{"distance",24.0},{"zDelta",-4.0},{"angle",90.0},{"horizDir","Der"},{"vertDir","Abajo"},{"hasDir",true}},
-            QVariantMap{{"id",503},{"npc",2101376},{"name","Wildgrass Herb"},{"category","resource"},{"distance",30.0},{"zDelta",0.0},{"angle",-90.0},{"horizDir","Izq"},{"vertDir","Nivel"},{"hasDir",true}},
-            QVariantMap{{"id",504},{"npc",2999999},{"name","Mystery Box"},{"category","object"},{"distance",40.0},{"zDelta",0.0},{"angle",180.0},{"horizDir","Atrás"},{"vertDir","Nivel"},{"hasDir",true}}
+            QVariantMap{{"id",501},{"npc",1200039},{"name","Hidden Cube"},{"category","chest"},{"distance",18.0},{"zDelta",5.0},{"angle",0.0},{"relX",0.0},{"relY",18.0},{"horizDir","Frente"},{"vertDir","Arriba"},{"hasDir",true}},
+            QVariantMap{{"id",502},{"npc",1080001},{"name","Odyle"},{"category","odyle"},{"distance",24.0},{"zDelta",-4.0},{"angle",90.0},{"relX",24.0},{"relY",0.0},{"horizDir","Der"},{"vertDir","Abajo"},{"hasDir",true}},
+            QVariantMap{{"id",503},{"npc",1080501},{"name","Sapphire Gemstone"},{"category","gem"},{"distance",28.0},{"zDelta",3.0},{"angle",-45.0},{"relX",-19.8},{"relY",19.8},{"horizDir","Frente"},{"vertDir","Arriba"},{"hasDir",true}},
+            QVariantMap{{"id",504},{"npc",1080101},{"name","Orichalcum Ore"},{"category","ore"},{"distance",30.0},{"zDelta",0.0},{"angle",-90.0},{"relX",-30.0},{"relY",0.0},{"horizDir","Izq"},{"vertDir","Nivel"},{"hasDir",true}},
+            QVariantMap{{"id",505},{"npc",1090601},{"name","Azpha"},{"category","herb"},{"distance",35.0},{"zDelta",-2.5},{"angle",180.0},{"relX",0.0},{"relY",-35.0},{"horizDir","Atrás"},{"vertDir","Abajo"},{"hasDir",true}},
+            QVariantMap{{"id",506},{"npc",1090201},{"name","Asvata Log"},{"category","wood"},{"distance",38.0},{"zDelta",0.0},{"angle",45.0},{"relX",26.8},{"relY",26.8},{"horizDir","Frente"},{"vertDir","Nivel"},{"hasDir",true}},
+            QVariantMap{{"id",507},{"npc",2999999},{"name","Mystery Box"},{"category","object"},{"distance",40.0},{"zDelta",0.0},{"angle",180.0},{"relX",0.0},{"relY",-40.0},{"horizDir","Atrás"},{"vertDir","Nivel"},{"hasDir",true}}
         };
         bridge.refreshDisplay();
         if(!QMetaObject::invokeMethod(radarBtn,"clicked")||!bridge.radarEnabled()) {app.exit(97);return;}
         settle();
-        if(!radarSec->isVisible()||bridge.displayRadar().size()!=3) {app.exit(97);return;}
-        bridge.setRadarChests(false);settle();
-        if(bridge.displayRadar().size()!=2) {app.exit(98);return;}
+        if(!radarSec->isVisible()||!radarMap->isVisible()||bridge.displayRadar().size()!=6||!radarSelName->property("text").toString().contains("Hidden Cube")||!radarSelVert->property("text").toString().contains("ARRIBA")) {app.exit(97);return;}
+        radarSec->setProperty("selectedRadarId",502);settle();
+        if(!radarSelName->property("text").toString().contains("Odyle")||!radarSelVert->property("text").toString().contains("ABAJO")) {app.exit(97);return;}
+        radarSec->setProperty("selectedRadarId",0);
+        bridge.setRadarItemFilter("Sapphire Gemstone");settle();
+        if(bridge.displayRadar().size()!=1||!radarSelName->property("text").toString().contains("Sapphire Gemstone")) {app.exit(98);return;}
+        bridge.setRadarItemFilter(QString());
+        bridge.setRadarChests(false);bridge.setRadarGems(false);settle();
+        if(bridge.displayRadar().size()!=4) {app.exit(98);return;}
         bridge.setRadarOther(true);settle();
-        if(bridge.displayRadar().size()!=3) {app.exit(98);return;}
-        {Bridge restored;if(!restored.radarEnabled()||restored.radarChests()||!restored.radarOther()) {app.exit(98);return;}}
-        bridge.setRadarChests(true);bridge.setRadarOther(false);bridge.setRadarEnabled(false);settle();
+        if(bridge.displayRadar().size()!=5) {app.exit(98);return;}
+        {Bridge restored;if(!restored.radarEnabled()||restored.radarChests()||restored.radarGems()||!restored.radarOther()) {app.exit(98);return;}}
+        bridge.setRadarChests(true);bridge.setRadarGems(true);bridge.setRadarOther(false);bridge.setRadarEnabled(false);settle();
         bridge.currentState=stateBeforeScene;bridge.selectedSession=selectionBeforeScene;bridge.refreshDisplay();settle();
         fprintf(stderr,"Scene metadata, PvP duel mode, enemy split bars, rival detail and 6-way radar checks passed.\n");
         auto resetButton=window->findChild<QQuickItem*>("resetDamageButton");

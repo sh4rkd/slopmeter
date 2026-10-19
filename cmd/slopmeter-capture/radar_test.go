@@ -82,26 +82,44 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 	}, self)
 
 	// 3. Orichalcum Ore (1080101) 10m to the Left (-Y) and Level (Z=5000) -> (11000, 9000, 5000)
-	herbPayload := buildSpawnPayload(503, 2, "", 1080101, 11000, 9000, 5000)
+	orePayload := buildSpawnPayload(503, 2, "", 1080101, 11000, 9000, 5000)
+	fight.observeRadar(aMessage{
+		opcode:  0x3640,
+		flags:   wire.FromServer,
+		payload: orePayload,
+		t:       now.Add(400 * time.Millisecond),
+	}, self)
+
+	// 4. Sapphire Gemstone (1080501) 12m to the Right (+Y) and 3m Up (+Z) -> (11000, 11200, 5300)
+	gemPayload := buildSpawnPayload(504, 4, "", 1080501, 11000, 11200, 5300)
+	fight.observeRadar(aMessage{
+		opcode:  0x3640,
+		flags:   wire.FromServer,
+		payload: gemPayload,
+		t:       now.Add(450 * time.Millisecond),
+	}, self)
+
+	// 5. Azpha (1090601) 25m Behind (-X) -> (8500, 10000, 5000)
+	herbPayload := buildSpawnPayload(505, 4, "", 1090601, 8500, 10000, 5000)
 	fight.observeRadar(aMessage{
 		opcode:  0x3640,
 		flags:   wire.FromServer,
 		payload: herbPayload,
-		t:       now.Add(400 * time.Millisecond),
+		t:       now.Add(480 * time.Millisecond),
 	}, self)
 
-	// 4. Dimensional Core 30m Behind (-X) -> (8000, 10000, 5000)
-	corePayload := buildSpawnPayload(504, 4, "", 2600078, 8000, 10000, 5000)
+	// 6. Asvata Log (1090201) 18m Front (+X) -> (12800, 10000, 5000)
+	woodPayload := buildSpawnPayload(506, 4, "", 1090201, 12800, 10000, 5000)
 	fight.observeRadar(aMessage{
 		opcode:  0x3640,
 		flags:   wire.FromServer,
-		payload: corePayload,
+		payload: woodPayload,
 		t:       now.Add(500 * time.Millisecond),
 	}, self)
 
 	snap := fight.snapshot(identities{self: self, name: "Tester"}, now.Add(time.Second))
-	if len(snap.Radar) != 4 {
-		t.Fatalf("expected 4 radar items, got %d", len(snap.Radar))
+	if len(snap.Radar) != 6 {
+		t.Fatalf("expected 6 radar items, got %d", len(snap.Radar))
 	}
 
 	byID := make(map[game.Entity]radarDisplay)
@@ -110,20 +128,28 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 	}
 
 	chest := byID[501]
-	if chest.Category != radarCategoryChest || chest.Name != "Hidden Cube" || chest.HorizDir != "Frente" || chest.VertDir != "Arriba" || chest.ZDelta != 5.0 {
+	if chest.Category != radarCategoryChest || chest.Name != "Hidden Cube" || chest.HorizDir != "Frente" || chest.VertDir != "Arriba" || chest.ZDelta != 5.0 || chest.RelX != 0.0 || chest.RelY != 20.0 {
 		t.Fatalf("unexpected chest radar item: %+v", chest)
 	}
 	odyle := byID[502]
-	if odyle.Category != radarCategoryOdyle || odyle.Name != "Odyle" || odyle.HorizDir != "Der" || odyle.VertDir != "Abajo" || odyle.ZDelta != -4.0 {
+	if odyle.Category != radarCategoryOdyle || odyle.Name != "Odyle" || odyle.HorizDir != "Der" || odyle.VertDir != "Abajo" || odyle.ZDelta != -4.0 || odyle.RelX != 15.0 || odyle.RelY != 0.0 {
 		t.Fatalf("unexpected odyle radar item: %+v", odyle)
 	}
-	herb := byID[503]
-	if herb.Category != radarCategoryResource || herb.HorizDir != "Izq" || herb.VertDir != "Nivel" || herb.Distance != 10.0 {
+	ore := byID[503]
+	if ore.Category != radarCategoryOre || ore.Name != "Orichalcum Ore" || ore.HorizDir != "Izq" || ore.VertDir != "Nivel" || ore.Distance != 10.0 || ore.RelX != -10.0 || ore.RelY != 0.0 {
+		t.Fatalf("unexpected ore radar item: %+v", ore)
+	}
+	gem := byID[504]
+	if gem.Category != radarCategoryGem || gem.Name != "Sapphire Gemstone" || gem.HorizDir != "Der" || gem.VertDir != "Arriba" || gem.ZDelta != 3.0 || gem.RelX != 12.0 || gem.RelY != 0.0 {
+		t.Fatalf("unexpected gem radar item: %+v", gem)
+	}
+	herb := byID[505]
+	if herb.Category != radarCategoryHerb || herb.Name != "Azpha" || herb.HorizDir != "Atrás" || herb.VertDir != "Nivel" || herb.Distance != 25.0 || herb.RelX != 0.0 || herb.RelY != -25.0 {
 		t.Fatalf("unexpected herb radar item: %+v", herb)
 	}
-	core := byID[504]
-	if core.Category != radarCategoryResource || core.HorizDir != "Atrás" || core.VertDir != "Nivel" || core.Distance != 30.0 {
-		t.Fatalf("unexpected core radar item: %+v", core)
+	wood := byID[506]
+	if wood.Category != radarCategoryWood || wood.Name != "Asvata Log" || wood.HorizDir != "Frente" || wood.VertDir != "Nivel" || wood.Distance != 18.0 || wood.RelX != 0.0 || wood.RelY != 18.0 {
+		t.Fatalf("unexpected wood radar item: %+v", wood)
 	}
 
 	// Despawn chest on Death packet
@@ -135,7 +161,7 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 	}, self)
 
 	snapAfter := fight.snapshot(identities{self: self, name: "Tester"}, now.Add(2*time.Second))
-	if len(snapAfter.Radar) != 3 {
-		t.Fatalf("expected 3 radar items after chest despawn, got %d", len(snapAfter.Radar))
+	if len(snapAfter.Radar) != 5 {
+		t.Fatalf("expected 5 radar items after chest despawn, got %d", len(snapAfter.Radar))
 	}
 }
