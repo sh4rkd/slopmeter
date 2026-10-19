@@ -569,9 +569,52 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 		}
 	}
 
+	// World object / Hidden Cube spawn (0x3634 - wire "34 36")
+	if m.opcode == 0x3634 {
+		e.observeRadarObjectSpawn(m.t, m.payload)
+	}
+
+	// World object removed / opened / despawned (0x3635 - "35 36", 0x363A - "3a 36")
+	if m.opcode == 0x3635 || m.opcode == 0x363A {
+		if id, _, ok := readVar(m.payload); ok && id != 0 {
+			e.radar.removeEntity(game.Entity(id))
+		}
+	}
+
+	// Continuous player position update from server buff/stat records (0x382A / 0x382B)
+	if (m.opcode == 0x382A || m.opcode == 0x382B) && len(m.payload) >= 16 {
+		if pos, valid := readVec3LE(m.payload[len(m.payload)-12:]); valid {
+			e.radar.updateSelfPos(pos)
+		}
+	}
+
+	// In-map teleport position fix (0x3623)
+	if m.opcode == 0x3623 && len(m.payload) >= 18 {
+		if pos, valid := readVec3LE(m.payload[6:18]); valid {
+			e.radar.updateSelfPos(pos)
+		}
+	}
+
 	if m.opcode == 0x3640 || m.opcode == 0x3641 || m.opcode == 0x3646 || m.opcode == 0x3647 || m.opcode == 0x3649 || m.opcode == 0x364A {
 		e.observeRadarSpawn(m.t, m.opcode, m.payload)
 	}
+}
+
+func (e *encounter) observeRadarObjectSpawn(t time.Time, payload []byte) {
+	id, rest, ok := readVar(payload)
+	if !ok || id == 0 || len(rest) < 2+4+12 {
+		return
+	}
+	kind := binary.LittleEndian.Uint16(rest[0:2])
+	template := binary.LittleEndian.Uint32(rest[2:6])
+	if template == 0 || template > 99_999_999 {
+		return
+	}
+	pos, valid := readVec3LE(rest[6:18])
+	if !valid {
+		return
+	}
+	e.radar.upsertEntity(t, game.Entity(id), template, uint32(kind), "", pos)
 }
 
 func (e *encounter) observeRadarSpawn(t time.Time, opcode wire.Opcode, payload []byte) {

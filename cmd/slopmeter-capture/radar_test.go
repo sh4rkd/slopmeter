@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/binary"
+	"encoding/hex"
 	"math"
 	"testing"
 	"time"
@@ -242,4 +243,65 @@ func TestRadarBroadRangesClassification(t *testing.T) {
 		}
 	}
 }
+
+func TestRadarRealWorldCubeLifecycle3436(t *testing.T) {
+	now := time.Now()
+	fight := newEncounter(0, 5*time.Second, 90*time.Second)
+
+	// Set player position ~20m from cube
+	selfPosBytes := make([]byte, 16)
+	selfPosBytes[0] = 0x01
+	selfPosBytes[1] = 0x00
+	putVec3(selfPosBytes[4:], -50205.0, 126283.0-2000, 15449.0)
+	fight.observeRadar(aMessage{
+		opcode:  0x382A,
+		flags:   wire.FromServer,
+		payload: selfPosBytes,
+		t:       now,
+	}, 100)
+
+	// 1. Spawn cube 65509 (template 1200039) via opcode 0x3634
+	spawnHex := "e5ff030400a74f1200001d44c780a5f647006471460000000000000000010101aae4a534a101000000000000000000002c4d4502070000"
+	spawnBytes, err := hex.DecodeString(spawnHex)
+	if err != nil {
+		t.Fatalf("hex decode error: %v", err)
+	}
+	fight.observeRadar(aMessage{
+		opcode:  0x3634,
+		flags:   wire.FromServer,
+		payload: spawnBytes,
+		t:       now.Add(10 * time.Millisecond),
+	}, 100)
+
+	snap := fight.snapshot(identities{self: 100, name: "Tester"}, now.Add(20*time.Millisecond))
+	if len(snap.Radar) != 1 {
+		t.Fatalf("expected 1 radar item from 0x3634 spawn, got %d", len(snap.Radar))
+	}
+	cube := snap.Radar[0]
+	if cube.ID != 65509 || cube.Category != radarCategoryChest || cube.Name != "Hidden Cube" {
+		t.Fatalf("unexpected cube radar item: %+v", cube)
+	}
+	if math.Abs(cube.Distance-20.0) > 0.5 {
+		t.Fatalf("expected distance ~20m, got %.1f", cube.Distance)
+	}
+
+	// 2. Remove cube 65509 via opcode 0x3635
+	removeHex := "e5ff03040300"
+	removeBytes, err := hex.DecodeString(removeHex)
+	if err != nil {
+		t.Fatalf("hex decode error: %v", err)
+	}
+	fight.observeRadar(aMessage{
+		opcode:  0x3635,
+		flags:   wire.FromServer,
+		payload: removeBytes,
+		t:       now.Add(30 * time.Millisecond),
+	}, 100)
+
+	snapAfter := fight.snapshot(identities{self: 100, name: "Tester"}, now.Add(40*time.Millisecond))
+	if len(snapAfter.Radar) != 0 {
+		t.Fatalf("expected 0 radar items after 0x3635 removal, got %d", len(snapAfter.Radar))
+	}
+}
+
 
