@@ -64,7 +64,27 @@ type radarDisplay struct {
 }
 
 var radarCatalog = map[uint32]radarDefinition{
-	// Odyle / Odylium / Crystals / Spirits
+	// Hidden Cubes (Cubos Ocultos) - Ground & Water variants across Elyos (Verteron) & Asmodian (Altgard)
+	1200039: {1200039, "Hidden Cube", radarCategoryChest},
+	1200040: {1200040, "Hidden Cube", radarCategoryChest},
+	1200041: {1200041, "Hidden Cube (Water)", radarCategoryChest},
+	1301199: {1301199, "Hidden Cube", radarCategoryChest},
+	1301200: {1301200, "Hidden Cube (Water)", radarCategoryChest},
+
+	// Odyle / Odylium / Crystals / Spirits (GatherSource & World Entities)
+	1080001: {1080001, "Odyle", radarCategoryOdyle},
+	1080002: {1080002, "Fine Odyle", radarCategoryOdyle},
+	1080003: {1080003, "Pure Odyle", radarCategoryOdyle},
+	1080004: {1080004, "Radiant Odyle", radarCategoryOdyle},
+	1090001: {1090001, "Odyle", radarCategoryOdyle},
+	1090002: {1090002, "Fine Odyle", radarCategoryOdyle},
+	1090003: {1090003, "Pure Odyle", radarCategoryOdyle},
+	1090004: {1090004, "Radiant Odyle", radarCategoryOdyle},
+	1580001: {1580001, "Odyle", radarCategoryOdyle},
+	1580002: {1580002, "Fine Odyle", radarCategoryOdyle},
+	1580003: {1580003, "Pure Odyle", radarCategoryOdyle},
+	1590001: {1590001, "Odyle", radarCategoryOdyle},
+	2000001: {2000001, "Odyle", radarCategoryOdyle},
 	2920213: {2920213, "Odylium Ore", radarCategoryOdyle},
 	2920225: {2920225, "Odylium Ore", radarCategoryOdyle},
 	2920303: {2920303, "Odylium Ore", radarCategoryOdyle},
@@ -87,7 +107,49 @@ var radarCatalog = map[uint32]radarDefinition{
 	2921332: {2921332, "Atheron's Crystal", radarCategoryOdyle},
 	2921333: {2921333, "Atheron's Crystal", radarCategoryOdyle},
 
-	// Gathering Resources: Herbs, Tourmaline, Jewels, Cores, Artifacts, Monoliths
+	// Gathering Resources: Ores, Gems, Trees, Herbs, Feathers, Cores, Artifacts, Monoliths
+	1080101: {1080101, "Orichalcum Ore", radarCategoryResource},
+	1080102: {1080102, "Fine Orichalcum Ore", radarCategoryResource},
+	1080103: {1080103, "Pure Orichalcum Ore", radarCategoryResource},
+	1080104: {1080104, "Radiant Orichalcum Ore", radarCategoryResource},
+	1080401: {1080401, "Orichalcum Ore", radarCategoryResource},
+	1080402: {1080402, "Fine Orichalcum Ore", radarCategoryResource},
+	1080403: {1080403, "Pure Orichalcum Ore", radarCategoryResource},
+	1080404: {1080404, "Radiant Orichalcum Ore", radarCategoryResource},
+	1090101: {1090101, "Orichalcum Ore", radarCategoryResource},
+	1090102: {1090102, "Fine Orichalcum Ore", radarCategoryResource},
+	1090103: {1090103, "Pure Orichalcum Ore", radarCategoryResource},
+	1090104: {1090104, "Radiant Orichalcum Ore", radarCategoryResource},
+	1090401: {1090401, "Orichalcum Ore", radarCategoryResource},
+	1090402: {1090402, "Fine Orichalcum Ore", radarCategoryResource},
+	1090403: {1090403, "Pure Orichalcum Ore", radarCategoryResource},
+	1090404: {1090404, "Radiant Orichalcum Ore", radarCategoryResource},
+	1080501: {1080501, "Sapphire Gemstone", radarCategoryResource},
+	1080502: {1080502, "Diamond Gemstone", radarCategoryResource},
+	1080503: {1080503, "Ruby Gemstone", radarCategoryResource},
+	1090501: {1090501, "Sapphire Gemstone", radarCategoryResource},
+	1090502: {1090502, "Diamond Gemstone", radarCategoryResource},
+	1090503: {1090503, "Ruby Gemstone", radarCategoryResource},
+	1090508: {1090508, "Diamond Gemstone", radarCategoryResource},
+	1080201: {1080201, "Yggdrasil Log", radarCategoryResource},
+	1080301: {1080301, "Yggdrasil Log", radarCategoryResource},
+	1090201: {1090201, "Asvata Log", radarCategoryResource},
+	1090301: {1090301, "Asvata Log", radarCategoryResource},
+	1080601: {1080601, "Aria Herb", radarCategoryResource},
+	1080602: {1080602, "Targena Herb", radarCategoryResource},
+	1080604: {1080604, "Targena Herb", radarCategoryResource},
+	1090601: {1090601, "Azpha Herb", radarCategoryResource},
+	1090602: {1090602, "Calendula Herb", radarCategoryResource},
+	1081001: {1081001, "Mela", radarCategoryResource},
+	1081002: {1081002, "Coriolus", radarCategoryResource},
+	1081003: {1081003, "Inina", radarCategoryResource},
+	1081004: {1081004, "Cypri", radarCategoryResource},
+	1081006: {1081006, "Kukuru", radarCategoryResource},
+	1091001: {1091001, "Raydam", radarCategoryResource},
+	1091002: {1091002, "Morfa", radarCategoryResource},
+	1091003: {1091003, "Conide", radarCategoryResource},
+	1091004: {1091004, "Pujery", radarCategoryResource},
+	1091006: {1091006, "Ohkra", radarCategoryResource},
 	2101376: {2101376, "Wildgrass Herb", radarCategoryResource},
 	2701619: {2701619, "Herb Rafflesia", radarCategoryResource},
 	2290068: {2290068, "Poison Grass", radarCategoryResource},
@@ -106,6 +168,7 @@ var radarCatalog = map[uint32]radarDefinition{
 	2600518: {2600518, "Dimensional Core", radarCategoryResource},
 	2910008: {2910008, "Activated Ancient Artifact", radarCategoryResource},
 	2910009: {2910009, "Deactivated Ancient Artifact", radarCategoryResource},
+	2921151: {2921151, "Magic Feather", radarCategoryResource},
 	2110690: {2110690, "Monolith", radarCategoryResource},
 	2110691: {2110691, "Monolith", radarCategoryResource},
 	2110692: {2110692, "Monolith", radarCategoryResource},
@@ -114,14 +177,13 @@ var radarCatalog = map[uint32]radarDefinition{
 	2407131: {2407131, "Monolith", radarCategoryResource},
 	2407132: {2407132, "Monolith", radarCategoryResource},
 
-	// Supply Chests, Relics, Cubes, Treasure Boxes
-	2900100: {2900100, "Supply Chest", radarCategoryChest},
-	2900101: {2900101, "Supply Chest", radarCategoryChest},
-	2900102: {2900102, "Supply Chest", radarCategoryChest},
+	// Supply Chests, Relics, Treasure Boxes
+	2900100: {2900100, "Hidden Cube / Supply Chest", radarCategoryChest},
+	2900101: {2900101, "Hidden Cube / Supply Chest", radarCategoryChest},
+	2900102: {2900102, "Hidden Cube / Supply Chest", radarCategoryChest},
 	2900200: {2900200, "Supply Chest", radarCategoryChest},
 	2900201: {2900201, "Treasure Chest", radarCategoryChest},
 	2920100: {2920100, "Supply Chest", radarCategoryChest},
-	2920101: {2920101, "Supply Chest", radarCategoryChest},
 }
 
 func validWorldCoord(v float32) bool {
@@ -162,7 +224,7 @@ func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, r
 	lower := strings.ToLower(inlineName)
 	if lower != "" {
 		switch {
-		case strings.Contains(lower, "chest") || strings.Contains(lower, "supply") || strings.Contains(lower, "cofre") || strings.Contains(lower, "suministro") || strings.Contains(lower, "treasure") || strings.Contains(lower, "tesoro") || strings.Contains(lower, "relic") || strings.Contains(lower, "cube") || strings.Contains(lower, "box") || strings.Contains(lower, "caja") || strings.Contains(lower, "상자") || strings.Contains(lower, "보급"):
+		case strings.Contains(lower, "cube") || strings.Contains(lower, "cubo") || strings.Contains(lower, "hidden") || strings.Contains(lower, "oculto") || strings.Contains(lower, "chest") || strings.Contains(lower, "supply") || strings.Contains(lower, "cofre") || strings.Contains(lower, "suministro") || strings.Contains(lower, "treasure") || strings.Contains(lower, "tesoro") || strings.Contains(lower, "relic") || strings.Contains(lower, "box") || strings.Contains(lower, "caja") || strings.Contains(lower, "큐브") || strings.Contains(lower, "상자") || strings.Contains(lower, "보급"):
 			return inlineName, radarCategoryChest, true
 		case strings.Contains(lower, "odyle") || strings.Contains(lower, "odylium") || strings.Contains(lower, "odil") || strings.Contains(lower, "aether") || strings.Contains(lower, "오드"):
 			return inlineName, radarCategoryOdyle, true
@@ -170,12 +232,35 @@ func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, r
 			return inlineName, radarCategoryResource, true
 		}
 	}
-	// Check NPC ID ranges used in Aion 2 for world objects / gathering nodes / chests:
-	// 2900000–2929999 are interactive field objects, chests, artifacts, and Odylium ores.
+	// Hidden Cube ID ranges in Aion 2 (1200000–1200099 Elyos Hidden Cubes, 1301190–1301210 Asmodian Hidden Cubes)
+	if (code >= 1200000 && code <= 1200099) || (code >= 1301190 && code <= 1301210) {
+		name := inlineName
+		if name == "" {
+			name = fmt.Sprintf("Hidden Cube (%d)", code)
+		}
+		return name, radarCategoryChest, true
+	}
+	// Odyle GatherSource ranges (1080001–1080099, 1090001–1090099, 1580001–1590099)
+	if (code >= 1080001 && code <= 1080099) || (code >= 1090001 && code <= 1090099) || (code >= 1580001 && code <= 1590099) {
+		name := inlineName
+		if name == "" {
+			name = fmt.Sprintf("Odyle (%d)", code)
+		}
+		return name, radarCategoryOdyle, true
+	}
+	// General GatherSource ranges (1080100–1091099: Orichalcum, Gemstones, Yggdrasil/Asvata Logs, Aria/Targena/Azpha/Calendula Herbs, etc.)
+	if code >= 1080100 && code <= 1091099 {
+		name := inlineName
+		if name == "" {
+			name = fmt.Sprintf("Gathering Node (%d)", code)
+		}
+		return name, radarCategoryResource, true
+	}
+	// 2900000–2929999 interactive field objects, chests, artifacts, and Odylium ores.
 	if code >= 2900000 && code <= 2909999 {
 		name := inlineName
 		if name == "" {
-			name = fmt.Sprintf("Supply / Chest (%d)", code)
+			name = fmt.Sprintf("Hidden Cube / Chest (%d)", code)
 		}
 		return name, radarCategoryChest, true
 	}
@@ -190,8 +275,6 @@ func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, r
 	if _, isBoss := bossCatalog[code]; isBoss {
 		return "", "", false
 	}
-	// Non-combat world objects / interactables often use low-mask object flags (e.g., 0x1c0000 or non-standard masks).
-	// Record as "object" so when the user enables the "Otros / Escáner" filter they can see any uncatalogued chest/object.
 	name := inlineName
 	if name == "" {
 		name = fmt.Sprintf("Object #%d", code)

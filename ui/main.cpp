@@ -261,10 +261,10 @@ public:
         QVariantMap previewBoss{{"entity",900100},{"name","Fediv Wraith"},{"hp",currentHP},{"max",maximumHP},
             {"percent",100.0*currentHP/maximumHP},{"eta",eta},{"totalEta",totalEta},{"timeLeft",timeLeft},{"etaKnown",partyDps>0},{"known",true},{"maxKnown",true}};
         QVariantList previewRadar{
-            QVariantMap{{"id",501},{"npc",2900100},{"name","Supply Chest"},{"category","chest"},{"distance",18.4},{"zDelta",4.8},{"angle",12.0},{"horizDir","Frente"},{"vertDir","Arriba"},{"hasDir",true}},
-            QVariantMap{{"id",502},{"npc",2920213},{"name","Odylium Ore"},{"category","odyle"},{"distance",26.1},{"zDelta",-3.5},{"angle",82.0},{"horizDir","Der"},{"vertDir","Abajo"},{"hasDir",true}},
-            QVariantMap{{"id",503},{"npc",2101376},{"name","Wildgrass Herb"},{"category","resource"},{"distance",34.0},{"zDelta",0.5},{"angle",-75.0},{"horizDir","Izq"},{"vertDir","Nivel"},{"hasDir",true}},
-            QVariantMap{{"id",504},{"npc",2600078},{"name","Dimensional Core"},{"category","resource"},{"distance",52.3},{"zDelta",-6.0},{"angle",168.0},{"horizDir","Atrás"},{"vertDir","Abajo"},{"hasDir",true}}
+            QVariantMap{{"id",501},{"npc",1200039},{"name","Hidden Cube"},{"category","chest"},{"distance",18.4},{"zDelta",4.8},{"angle",12.0},{"horizDir","Frente"},{"vertDir","Arriba"},{"hasDir",true}},
+            QVariantMap{{"id",502},{"npc",1080001},{"name","Odyle"},{"category","odyle"},{"distance",26.1},{"zDelta",-3.5},{"angle",82.0},{"horizDir","Der"},{"vertDir","Abajo"},{"hasDir",true}},
+            QVariantMap{{"id",503},{"npc",1080101},{"name","Orichalcum Ore"},{"category","resource"},{"distance",34.0},{"zDelta",0.5},{"angle",-75.0},{"horizDir","Izq"},{"vertDir","Nivel"},{"hasDir",true}},
+            QVariantMap{{"id",504},{"npc",1080601},{"name","Aria Herb"},{"category","resource"},{"distance",52.3},{"zDelta",-6.0},{"angle",168.0},{"horizDir","Atrás"},{"vertDir","Abajo"},{"hasDir",true}}
         };
         return {{"character","Test party"},{"encounter","Test mode"},{"duration",fightDuration},{"active",true},{"session",0},{"actors",rows},{"boss",previewBoss},{"radar",previewRadar},{"scene",QVariantMap{{"id",600021},{"name","Fire Temple"},{"instance",1}}}};
     }

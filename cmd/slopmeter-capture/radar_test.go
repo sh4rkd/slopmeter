@@ -63,8 +63,8 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 		t:      now.Add(100 * time.Millisecond),
 	}, self)
 
-	// 1. Supply Chest 20m in Front (+X) and 5m Up (+Z) -> (13000, 10000, 5500)
-	chestPayload := buildSpawnPayload(501, 4, "Cofre de suministro", 2900100, 13000, 10000, 5500)
+	// 1. Hidden Cube (1200039) 20m in Front (+X) and 5m Up (+Z) -> (13000, 10000, 5500)
+	chestPayload := buildSpawnPayload(501, 4, "", 1200039, 13000, 10000, 5500)
 	fight.observeRadar(aMessage{
 		opcode:  0x3640,
 		flags:   wire.FromServer,
@@ -72,8 +72,8 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 		t:       now.Add(200 * time.Millisecond),
 	}, self)
 
-	// 2. Odylium Ore 15m to the Right (+Y) and 4m Down (-Z) -> (11000, 11500, 4600)
-	odylePayload := buildSpawnPayload(502, 4, "", 2920213, 11000, 11500, 4600)
+	// 2. Odyle (1080001) 15m to the Right (+Y) and 4m Down (-Z) -> (11000, 11500, 4600)
+	odylePayload := buildSpawnPayload(502, 4, "", 1080001, 11000, 11500, 4600)
 	fight.observeRadar(aMessage{
 		opcode:  0x3641,
 		flags:   wire.FromServer,
@@ -81,8 +81,8 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 		t:       now.Add(300 * time.Millisecond),
 	}, self)
 
-	// 3. Wildgrass Herb 10m to the Left (-Y) and Level (Z=5000) -> (11000, 9000, 5000)
-	herbPayload := buildSpawnPayload(503, 2, "", 2101376, 11000, 9000, 5000)
+	// 3. Orichalcum Ore (1080101) 10m to the Left (-Y) and Level (Z=5000) -> (11000, 9000, 5000)
+	herbPayload := buildSpawnPayload(503, 2, "", 1080101, 11000, 9000, 5000)
 	fight.observeRadar(aMessage{
 		opcode:  0x3640,
 		flags:   wire.FromServer,
@@ -110,11 +110,11 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 	}
 
 	chest := byID[501]
-	if chest.Category != radarCategoryChest || chest.HorizDir != "Frente" || chest.VertDir != "Arriba" || chest.ZDelta != 5.0 {
+	if chest.Category != radarCategoryChest || chest.Name != "Hidden Cube" || chest.HorizDir != "Frente" || chest.VertDir != "Arriba" || chest.ZDelta != 5.0 {
 		t.Fatalf("unexpected chest radar item: %+v", chest)
 	}
 	odyle := byID[502]
-	if odyle.Category != radarCategoryOdyle || odyle.HorizDir != "Der" || odyle.VertDir != "Abajo" || odyle.ZDelta != -4.0 {
+	if odyle.Category != radarCategoryOdyle || odyle.Name != "Odyle" || odyle.HorizDir != "Der" || odyle.VertDir != "Abajo" || odyle.ZDelta != -4.0 {
 		t.Fatalf("unexpected odyle radar item: %+v", odyle)
 	}
 	herb := byID[503]

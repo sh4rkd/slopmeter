@@ -210,7 +210,7 @@ Window {
                         Item { Layout.fillWidth: true }
                         Repeater {
                             model: [
-                                { key: "chest", label: "Cofres", active: backend.radarChests, color: "#f2c15a" },
+                                { key: "chest", label: "Cubos/Cofres", active: backend.radarChests, color: "#f2c15a" },
                                 { key: "odyle", label: "Odyle", active: backend.radarOdyle, color: "#6be0ff" },
                                 { key: "resource", label: "Recursos", active: backend.radarResources, color: "#7be35a" },
                                 { key: "other", label: "Otros", active: backend.radarOther, color: "#c0cbdc" }
