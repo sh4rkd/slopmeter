@@ -193,6 +193,22 @@ Window {
                     function categoryIcon(cat) { return backend.radarCategoryIcon(cat) }
                     function subItemsFor(catKey) { return backend.radarSubItemsFor(catKey) }
                     function hasTarget(t) { return Boolean(t && (t.name || t.id)) }
+                    function toggleCategory(catKey, button) {
+                        if (button === Qt.RightButton) {
+                            backend.radarSubmenu = (backend.radarSubmenu === catKey) ? "" : catKey
+                            return
+                        }
+                        if (catKey === "chest") backend.radarChests = !backend.radarChests
+                        else if (catKey === "odyle") backend.radarOdyle = !backend.radarOdyle
+                        else if (catKey === "gem") backend.radarGems = !backend.radarGems
+                        else if (catKey === "ore") backend.radarOres = !backend.radarOres
+                        else if (catKey === "herb") backend.radarHerbs = !backend.radarHerbs
+                        else if (catKey === "wood") backend.radarWood = !backend.radarWood
+                        else if (catKey === "other") backend.radarOther = !backend.radarOther
+                        if (backend.radarSubItemsFor(catKey).length > 1) {
+                            backend.radarSubmenu = catKey
+                        }
+                    }
                     RowLayout {
                         Layout.fillWidth: true; spacing: 3
                         Label {
@@ -246,20 +262,7 @@ Window {
                                 TapHandler {
                                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                                     onTapped: function(eventPoint, button) {
-                                        if (button === Qt.RightButton) {
-                                            backend.radarSubmenu = (backend.radarSubmenu === modelData.key) ? "" : modelData.key
-                                            return
-                                        }
-                                        if (modelData.key === "chest") backend.radarChests = !backend.radarChests
-                                        else if (modelData.key === "odyle") backend.radarOdyle = !backend.radarOdyle
-                                        else if (modelData.key === "gem") backend.radarGems = !backend.radarGems
-                                        else if (modelData.key === "ore") backend.radarOres = !backend.radarOres
-                                        else if (modelData.key === "herb") backend.radarHerbs = !backend.radarHerbs
-                                        else if (modelData.key === "wood") backend.radarWood = !backend.radarWood
-                                        else if (modelData.key === "other") backend.radarOther = !backend.radarOther
-                                        if (backend.radarSubItemsFor(modelData.key).length > 1) {
-                                            backend.radarSubmenu = modelData.key
-                                        }
+                                        radarSection.toggleCategory(modelData.key, button)
                                     }
                                 }
                                 HoverHandler { cursorShape: Qt.PointingHandCursor }
