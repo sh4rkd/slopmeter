@@ -172,3 +172,47 @@ func TestDelayedHealthCannotResetFight(t *testing.T) {
 		t.Fatal("delayed spawn HP rewound current health or reset fight")
 	}
 }
+
+func TestPvPDetectionExchangeAndOutcome(t *testing.T) {
+	e, t0 := encounterFixture()
+	group := scope{identities: identities{names: make(map[game.Entity]string)}}
+	group.observeMessage(aMessage{flags: wire.FromServer, event: game.Player{Entity: 1, Name: "Me", Self: true}, t: t0})
+	group.observeMessage(aMessage{flags: wire.FromServer, event: game.Player{Entity: 99, Name: "EnemyPlayer"}, t: t0})
+
+	var assassinSkill game.Skill
+	for id, cls := range skillClasses {
+		if cls == "Assassin" {
+			assassinSkill = id
+			break
+		}
+	}
+	// Enemy casts and hits us
+	castMsg := aMessage{flags: wire.FromServer, event: game.Cast{Actor: 99, Target: 1, Skill: assassinSkill}, t: t0}
+	group.observeMessage(castMsg)
+	hitIn := game.Hit{Actor: 99, Target: 1, Skill: assassinSkill, Damage: 1200, Type: 3}
+	group.observeMessage(aMessage{flags: wire.FromServer, event: hitIn, t: t0})
+	e.pvpHit(t0, hitIn, false)
+	e.enemyCast(t0, game.Cast{Actor: 99, Target: 1, Skill: assassinSkill})
+
+	// We hit enemy back
+	hitOut := game.Hit{Actor: 1, Target: 99, Skill: 100, Damage: 1800, Type: 3}
+	e.pvpHit(t0.Add(2*time.Second), hitOut, true)
+
+	// Enemy dies
+	e.observe(aMessage{flags: wire.FromServer, event: game.Death{Entity: 99, Flag: 3}, t: t0.Add(2 * time.Second)})
+
+	s := e.snapshot(group.identities, t0.Add(2*time.Second))
+	if !s.PvP || s.PvPSummary == nil {
+		t.Fatalf("expected PvP mode snapshot, got: %+v", s)
+	}
+	if s.PvPSummary.DamageDealt != 1800 || s.PvPSummary.DamageTaken != 1200 || s.PvPSummary.OpponentName != "EnemyPlayer" || s.PvPSummary.OpponentClass != "Assassin" || s.PvPSummary.Outcome != "Victory" {
+		t.Fatalf("unexpected PvP summary: %+v", s.PvPSummary)
+	}
+	if len(s.Actors) != 1 || s.Actors[0].Damage != 1800 || s.Actors[0].DamageTaken != 1200 || s.Actors[0].MaxHit != 1800 || s.Actors[0].CriticalRate != 100 {
+		t.Fatalf("unexpected ally PvP row: %+v", s.Actors)
+	}
+	if len(s.Enemies) != 1 || !s.Enemies[0].Enemy || s.Enemies[0].Name != "EnemyPlayer" || s.Enemies[0].Class != "Assassin" || s.Enemies[0].Damage != 1200 || s.Enemies[0].DamageTaken != 1800 || len(s.Enemies[0].Timeline) != 1 {
+		t.Fatalf("unexpected enemy PvP row: %+v", s.Enemies)
+	}
+}
+

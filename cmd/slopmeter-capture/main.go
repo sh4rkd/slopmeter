@@ -23,7 +23,11 @@ type total struct {
 	timeline          []timedSkillUse
 	timelineTruncated bool
 	damage            uint64
+	damageTaken       uint64
 	hits              uint64
+	critical          uint64
+	typed             uint64
+	maxHit            uint32
 	skills            map[game.Skill]uint64
 	breakdown         map[game.Skill]*skillTotal
 }
@@ -46,6 +50,13 @@ func (m *meter) add(t time.Time, h game.Hit) {
 	a := m.actor(h.Actor)
 	a.damage += uint64(h.Damage)
 	a.hits++
+	a.maxHit = max(a.maxHit, h.Damage)
+	if h.Type == 2 || h.Type == 3 {
+		a.typed++
+	}
+	if h.Type == 3 {
+		a.critical++
+	}
 	a.skills[h.Skill] += uint64(h.Damage)
 	skill := a.skill(h.Skill)
 	skill.damage += uint64(h.Damage)
@@ -317,18 +328,34 @@ loop:
 				fight.number = number
 				fight.onFinish = archive
 			}
-			if c, ok := msg.Event.(game.Cast); ok && group.accepts(c.Actor, msg.Time) {
-				fight.cast(msg.Time, c)
-				dirty = true
+			if c, ok := msg.Event.(game.Cast); ok {
+				if group.accepts(c.Actor, msg.Time) {
+					fight.cast(msg.Time, c)
+					dirty = true
+				} else if (c.Target != 0 && group.accepts(c.Target, msg.Time)) || fight.enemyMeter.actors[c.Actor] != nil {
+					fight.enemyCast(msg.Time, c)
+					dirty = true
+				}
 			}
-			if hasHit && group.accepts(hit.Actor, msg.Time) && !group.accepts(hit.Target, msg.Time) {
-				fight.hit(msg.Time, hit)
-				dirty = true
+			if hasHit {
+				actorAccepted := group.accepts(hit.Actor, msg.Time)
+				targetAccepted := group.accepts(hit.Target, msg.Time)
+				if actorAccepted && !targetAccepted {
+					if group.isPlayer(hit.Target) && fight.npcs[hit.Target] == nil {
+						fight.pvpHit(msg.Time, hit, true)
+					} else {
+						fight.hit(msg.Time, hit)
+					}
+					dirty = true
+				} else if !actorAccepted && targetAccepted && group.isPlayer(hit.Actor) && fight.npcs[hit.Actor] == nil {
+					fight.pvpHit(msg.Time, hit, false)
+					dirty = true
+				}
 			}
 			if oldSelf != group.self || oldName != group.name || oldSession != fight.number || oldStatus != fight.status || oldBoss != fight.boss || oldScene != fight.scene.sceneDisplay || oldMetadata != fight.metadataRevision {
 				dirty = true
 			}
-			if p, ok := msg.Event.(game.Player); ok && fight.meter.actors[p.Entity] != nil {
+			if p, ok := msg.Event.(game.Player); ok && (fight.meter.actors[p.Entity] != nil || fight.enemyMeter.actors[p.Entity] != nil) {
 				dirty = true
 			}
 		}

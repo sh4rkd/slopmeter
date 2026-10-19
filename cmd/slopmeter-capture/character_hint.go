@@ -31,6 +31,7 @@ func (s *scope) setCharacterHint(name string) {
 		s.name = ""
 		s.members = nil
 		s.classes = nil
+		s.players = nil
 		s.stats = nil
 		s.hintedSelf = false
 	}

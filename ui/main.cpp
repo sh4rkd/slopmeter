@@ -51,13 +51,14 @@ static bool g_noLayerShell=false;
 class ActorModel : public QAbstractListModel {
 public:
     QList<QVariantMap> rows;
-    enum { Name=Qt::UserRole+1, Damage, DPS, Share, Fill, Class, ActorId, GearScore, CombatPower };
+    enum { Name=Qt::UserRole+1, Damage, DamageTaken, DPS, CriticalRate, CriticalKnown, MaxHit, Enemy, Share, Fill, Class, ActorId, GearScore, CombatPower };
     using QAbstractListModel::QAbstractListModel;
     int rowCount(const QModelIndex &parent={}) const override { return parent.isValid()?0:rows.size(); }
-    QHash<int,QByteArray> roleNames() const override {static const QHash<int,QByteArray> roles{{Name,"actorName"},{Damage,"damage"},{DPS,"dps"},{Share,"share"},{Fill,"fill"},{Class,"actorClass"},{ActorId,"actorId"},{GearScore,"gearScore"},{CombatPower,"combatPower"}};return roles;}
+    QHash<int,QByteArray> roleNames() const override {static const QHash<int,QByteArray> roles{{Name,"actorName"},{Damage,"damage"},{DamageTaken,"damageTaken"},{DPS,"dps"},{CriticalRate,"criticalRate"},{CriticalKnown,"criticalKnown"},{MaxHit,"maxHit"},{Enemy,"enemy"},{Share,"share"},{Fill,"fill"},{Class,"actorClass"},{ActorId,"actorId"},{GearScore,"gearScore"},{CombatPower,"combatPower"}};return roles;}
     QVariant data(const QModelIndex &i,int role) const override {
         if (!i.isValid()||i.row()>=rows.size()) return {};
-        if(role==GearScore || role==CombatPower) return rows[i.row()].value(role==GearScore ? "gearScore" : "combatPower", 0);
+        if(role==GearScore || role==CombatPower || role==DamageTaken || role==CriticalRate || role==MaxHit) return rows[i.row()].value(QString::fromUtf8(roleNames().value(role)), 0);
+        if(role==CriticalKnown || role==Enemy) return rows[i.row()].value(QString::fromUtf8(roleNames().value(role)), false);
         return rows[i.row()].value(QString::fromUtf8(roleNames().value(role)) == "actorName" ? "name" : role==Class ? "class" : role==ActorId ? "id" : QString::fromUtf8(roleNames().value(role)));
     }
     void update(const QJsonArray &array) {
@@ -99,6 +100,10 @@ class Bridge : public QObject {
     Q_PROPERTY(QVariantList fightChoices READ fightChoices NOTIFY historyChanged)
     Q_PROPERTY(int selectedFightIndex READ selectedFightIndex NOTIFY historyChanged)
     Q_PROPERTY(QVariantList displayPlayers READ displayPlayers NOTIFY detailChanged)
+    Q_PROPERTY(QVariantList displayEnemies READ displayEnemies NOTIFY detailChanged)
+    Q_PROPERTY(QVariantList detailChoices READ detailChoices NOTIFY detailChanged)
+    Q_PROPERTY(bool isPvP READ isPvP NOTIFY pvpChanged)
+    Q_PROPERTY(QVariantMap pvpSummary READ pvpSummary NOTIFY pvpChanged)
     Q_PROPERTY(QVariantMap detailPlayer READ detailPlayer NOTIFY detailChanged)
     Q_PROPERTY(QVariantMap detailFight READ detailFight NOTIFY detailChanged)
     Q_PROPERTY(bool testMode READ testMode WRITE setTestMode NOTIFY testModeChanged)
@@ -129,7 +134,7 @@ class Bridge : public QObject {
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
     Q_PROPERTY(double duration READ duration NOTIFY durationChanged)
     Q_PROPERTY(QString encounter READ encounter NOTIFY encounterChanged)
- Q_PROPERTY(QString sceneName READ sceneName NOTIFY encounterChanged)
+    Q_PROPERTY(QString sceneName READ sceneName NOTIFY encounterChanged)
     Q_PROPERTY(QVariantMap boss READ boss NOTIFY bossChanged)
     Q_PROPERTY(QString bossHealthStatus READ bossHealthStatus NOTIFY bossChanged)
     Q_PROPERTY(QString displayStatus READ displayStatus NOTIFY displayChanged)
@@ -169,7 +174,9 @@ public:
         if(process.state()!=QProcess::NotRunning)
             process.write(QJsonDocument(QJsonObject{{"reset",true}}).toJson(QJsonDocument::Compact)+"\n");
         else {
-            currentState["actors"]=QVariantList{};currentState["active"]=false;
+            currentState["actors"]=QVariantList{};currentState["enemies"]=QVariantList{};
+            currentState["pvp"]=false;currentState["pvpSummary"]=QVariantMap{};
+            currentState["active"]=false;
             currentState["duration"]=0;currentState["cleared"]=true;
             currentState["encounter"]="Manually reset · Waiting for combat";
             refreshDisplay();
@@ -263,6 +270,7 @@ public:
     void setShowDetails(bool value) {detailsSetting=value;QSettings().setValue("appearance/showDetails",value);emit appearanceChanged();}
     Q_INVOKABLE void resetAppearance() {setMinimalistMode(false);setMinimalistCompactDamage(true);setGrowUp(false);setScoreDisplay(1);setShowTotalDamage(true);setRoundedDps(false);setBarWidth(352);setBarHeight(44);setBarSpacing(4);setShowDetails(true);setBackgroundOpacity(75);setOverallOpacity(100);setShowBorder(true);setBarStyle(0);setPollInterval(200);}
     ActorModel actors;
+    ActorModel enemies;
     SkillModel skills;
     QProcess process;
     QByteArray buffer;
@@ -275,15 +283,19 @@ public:
     bool dragging=false, autoDisplay=true, detectionTest=false;
     QQuickItem *panel=nullptr;
     QString sceneLabel;
- QString encounterLabel="Waiting for combat";
+    QString encounterLabel="Waiting for combat";
     QVariantMap bossState;
+    bool pvpActive=false;
+    QVariantMap pvpState;
     bool captureReady=false,replayMode=false;
     QString displayMessage="Waiting for AION 2 window…", gameScreen, scriptName;
     QTemporaryFile script;
     Q_INVOKABLE QString displayStatus() const {return displayMessage;}
     QString encounter() const {return encounterLabel;}
- QString sceneName() const {return sceneLabel;}
+    QString sceneName() const {return sceneLabel;}
     QVariantMap boss() const {return bossState;}
+    bool isPvP() const {return pvpActive;}
+    QVariantMap pvpSummary() const {return pvpState;}
     QString healthMessage;
     QString bossHealthStatus() const {return previewEnabled?"Test mode: simulated boss HP.":healthMessage;}
     bool captureActive() const {return captureReady;}
@@ -377,8 +389,13 @@ public:
         QVariantList choices{QVariantMap{{"id",qulonglong(0)},{"label","Current fight"}}};
         for(const auto &value:history) {
             auto entry=value.toMap();auto state=entry.value("snapshot").toMap();auto boss=state.value("boss").toMap();
-            auto label=boss.value("name").toString();if(label.isEmpty()) label=state.value("scene").toMap().value("name").toString();
- if(label.isEmpty()) label="Combat";
+            auto label=boss.value("name").toString();
+            if(state.value("pvp").toBool()) {
+                auto opp=state.value("pvpSummary").toMap().value("opponentName").toString();
+                label=opp.isEmpty()?"PvP":"PvP vs "+opp;
+            }
+            if(label.isEmpty()) label=state.value("scene").toMap().value("name").toString();
+            if(label.isEmpty()) label="Combat";
             auto started=QDateTime::fromString(entry.value("started").toString(),Qt::ISODateWithMs).toLocalTime();
             choices.append(QVariantMap{{"id",state.value("session")},{"label",QString("#%1 · %2 · %3s · %4").arg(state.value("session").toULongLong()).arg(label).arg(state.value("duration").toDouble(),0,'f',1).arg(started.toString("MMM d HH:mm:ss"))}});
         }
@@ -389,10 +406,22 @@ public:
         auto choices=fightChoices();for(int i=0;i<choices.size();++i) if(choices[i].toMap().value("id").toULongLong()==selectedSession) return i;return 0;
     }
     QVariantList displayPlayers() const {return displayState.value("actors").toList();}
+    QVariantList displayEnemies() const {return displayState.value("enemies").toList();}
+    QVariantList detailChoices() const {
+        QVariantList all=displayPlayers();
+        for(const auto &enemy:displayEnemies()) {
+            auto m=enemy.toMap();
+            m["name"]=m.value("name").toString()+" (Rival)";
+            all.append(m);
+        }
+        return all;
+    }
     QVariantMap detailFight() const {return displayState;}
     QVariantMap detailPlayer() const {
         auto rows=displayPlayers();for(const auto &row:rows) if(row.toMap().value("id").toUInt()==selectedActor) return row.toMap();
-        return rows.isEmpty()?QVariantMap{}:rows.first().toMap();
+        auto enemyRows=displayEnemies();for(const auto &row:enemyRows) if(row.toMap().value("id").toUInt()==selectedActor) return row.toMap();
+        if(!rows.isEmpty()) return rows.first().toMap();
+        return enemyRows.isEmpty()?QVariantMap{}:enemyRows.first().toMap();
     }
     Q_INVOKABLE void selectPlayer(quint32 id) {selectedActor=id;updateDetail();}
     Q_INVOKABLE void selectFight(quint64 id) {if(previewEnabled) return;selectedSession=id;refreshDisplay();emit historyChanged();}
@@ -409,7 +438,7 @@ public:
         }
         // Keep the last completed fight on Current fight until positive damage
         // starts a new session. History owns immutable names, skills and target HP.
-        if(!previewEnabled&&!selectedSession&&!currentState.value("cleared").toBool()&&!currentState.value("active").toBool()&&currentState.value("actors").toList().isEmpty()) {
+        if(!previewEnabled&&!selectedSession&&!currentState.value("cleared").toBool()&&!currentState.value("active").toBool()&&currentState.value("actors").toList().isEmpty()&&currentState.value("enemies").toList().isEmpty()) {
             for(const auto &value:history) {auto state=value.toMap().value("snapshot").toMap();if(state.value("session")==currentState.value("session")) {displayState=state;break;}}
         }
         auto next=(!previewEnabled&&!selectedSession?currentState:displayState).value("character").toString();
@@ -419,10 +448,15 @@ public:
         if(next!=name) {name=next;emit characterChanged();}
         double seconds=displayState.value("duration").toDouble();if(seconds!=span) {span=seconds;emit durationChanged();}
         auto label=displayState.value("encounter","Waiting for combat").toString();
- auto scene=displayState.value("scene").toMap().value("name").toString();
- if(label!=encounterLabel||scene!=sceneLabel) {encounterLabel=label;sceneLabel=scene;emit encounterChanged();}
+        auto scene=displayState.value("scene").toMap().value("name").toString();
+        if(label!=encounterLabel||scene!=sceneLabel) {encounterLabel=label;sceneLabel=scene;emit encounterChanged();}
         auto boss=displayState.value("boss").toMap();auto health=displayState.value("healthStatus").toString();if(boss!=bossState||health!=healthMessage) {bossState=boss;healthMessage=health;emit bossChanged();}
-        actors.update(QJsonArray::fromVariantList(displayPlayers()));updateDetail();
+        const bool nextPvp=displayState.value("pvp").toBool();
+        const auto nextPvpSummary=displayState.value("pvpSummary").toMap();
+        if(nextPvp!=pvpActive||nextPvpSummary!=pvpState) {pvpActive=nextPvp;pvpState=nextPvpSummary;emit pvpChanged();}
+        actors.update(QJsonArray::fromVariantList(displayPlayers()));
+        enemies.update(QJsonArray::fromVariantList(displayEnemies()));
+        updateDetail();
     }
     void updateDetail() {skills.update(QJsonArray::fromVariantList(detailPlayer().value("skills").toList()));emit detailChanged();}
     QString appVersion() const {return SLOPMETER_VERSION;}
@@ -543,7 +577,7 @@ public:
     Q_INVOKABLE void quit() {QCoreApplication::quit();}
 signals:
     void interfacesChanged();
-    void characterNameChanged();void captureChanged();void testModeChanged();void pollingChanged();void historyChanged();void detailChanged();void appearanceChanged();void characterChanged();void statusChanged();void durationChanged();void displayChanged();void encounterChanged();void bossChanged();
+    void characterNameChanged();void captureChanged();void testModeChanged();void pollingChanged();void historyChanged();void detailChanged();void appearanceChanged();void characterChanged();void statusChanged();void durationChanged();void displayChanged();void encounterChanged();void bossChanged();void pvpChanged();
 };
 static void global(void *data,wl_registry*,uint32_t,const char *interface,uint32_t) {if(!std::strcmp(interface,"zwlr_layer_shell_v1")) *static_cast<bool*>(data)=true;}
 static void removed(void*,wl_registry*,uint32_t) {}
@@ -589,7 +623,7 @@ int main(int argc,char **argv) {
     }
     Bridge bridge;bridge.headless=headless;
     ReleaseCheck updates(SLOPMETER_VERSION);
-    QQmlApplicationEngine engine;engine.rootContext()->setContextProperty("backend",&bridge);engine.rootContext()->setContextProperty("actorModel",&bridge.actors);engine.rootContext()->setContextProperty("skillModel",&bridge.skills);
+    QQmlApplicationEngine engine;engine.rootContext()->setContextProperty("backend",&bridge);engine.rootContext()->setContextProperty("actorModel",&bridge.actors);engine.rootContext()->setContextProperty("enemyModel",&bridge.enemies);engine.rootContext()->setContextProperty("skillModel",&bridge.skills);
     engine.rootContext()->setContextProperty("updates",&updates);
     engine.load(QUrl("qrc:/Main.qml"));if(engine.rootObjects().size()!=1) return 1;
     auto window=qobject_cast<QQuickWindow*>(engine.rootObjects().first());if(!window) return 1;bridge.window=window;
@@ -875,8 +909,18 @@ int main(int argc,char **argv) {
         bridge.currentState["scene"]=QVariantMap{{"id",600021},{"name","Fire Temple"},{"instance",42}};bridge.refreshDisplay();settle();
         auto combatLabel=window->findChild<QObject*>("combatStatus");
         if(bridge.sceneName()!="Fire Temple"||!combatLabel||!combatLabel->property("text").toString().contains("Fire Temple")) {app.exit(75);return;}
+        bridge.currentState["pvp"]=true;
+        bridge.currentState["pvpSummary"]=QVariantMap{{"opponentId",99},{"opponentName","ShadowBlade"},{"opponentClass","Assassin"},{"damageDealt",25000},{"damageTaken",18000},{"dealtDps",2500},{"takenDps",1800},{"dealtShare",58.1},{"outcome","Victory"}};
+        bridge.currentState["enemies"]=QVariantList{QVariantMap{{"id",99},{"name","ShadowBlade"},{"class","Assassin"},{"enemy",true},{"damage",18000},{"damageTaken",25000},{"dps",1800},{"criticalRate",45.0},{"criticalKnown",true},{"maxHit",4200},{"share",100},{"fill",100},{"skills",QVariantList{QVariantMap{{"id",12010000},{"name","Ambush"},{"damage",18000},{"share",100},{"fightShare",100},{"hits",5},{"uses",1},{"usesKnown",true},{"critical",2},{"criticalRate",40},{"criticalKnown",true},{"min",3000},{"max",4200},{"average",3600},{"hitsPerSecond",0.5}}}}}};
+        bridge.refreshDisplay();settle();
+        auto pvpHeader=window->findChild<QQuickItem*>("pvpDuelHeader");
+        auto enemySec=window->findChild<QQuickItem*>("enemySection");
+        auto pvpTitle=window->findChild<QObject*>("pvpHeaderTitle");
+        if(!bridge.isPvP()||!pvpHeader||!pvpHeader->isVisible()||!enemySec||!enemySec->isVisible()||bridge.enemies.rowCount()!=1||!pvpTitle||!pvpTitle->property("text").toString().contains("ShadowBlade")||!pvpTitle->property("text").toString().contains("VICTORY")) {app.exit(95);return;}
+        bridge.selectPlayer(99);
+        if(!bridge.detailPlayer().value("enemy").toBool()||bridge.detailPlayer().value("name").toString()!="ShadowBlade"||bridge.skills.rowCount()!=1) {app.exit(96);return;}
         bridge.currentState=stateBeforeScene;bridge.selectedSession=selectionBeforeScene;bridge.refreshDisplay();settle();
-        fprintf(stderr,"Scene metadata propagation and encounter label checks passed.\n");
+        fprintf(stderr,"Scene metadata, PvP duel mode, enemy split bars and rival detail checks passed.\n");
         auto resetButton=window->findChild<QQuickItem*>("resetDamageButton");
         auto settingsButton=window->findChild<QQuickItem*>("settingsButton");
  auto minimizeButton=window->findChild<QQuickItem*>("minimizeButton");

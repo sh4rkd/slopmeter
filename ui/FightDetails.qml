@@ -14,7 +14,7 @@ Window {
     function number(value) {return Number(value || 0).toLocaleString(Qt.locale(), 'f', 0)}
     function percent(value) {return Number(value || 0).toFixed(1) + "%"}
     function selectedPlayerIndex() {
-        for (let i=0;i<backend.displayPlayers.length;++i) if (backend.displayPlayers[i].id === player.id) return i
+        for (let i=0;i<backend.detailChoices.length;++i) if (backend.detailChoices[i].id === player.id) return i
         return 0
     }
     component Cell: Label {
@@ -25,7 +25,7 @@ Window {
         anchors.fill: parent; anchors.margins: 20; spacing: 14
         RowLayout {
             Layout.fillWidth: true
-            Label {text: "Damage breakdown"; color: "#f2f5fa"; font.pixelSize: 22; font.bold: true; Layout.fillWidth: true}
+            Label {text: details.player.enemy ? "Rival damage breakdown (PvP)" : "Damage breakdown"; color: details.player.enemy ? "#ff9e9e" : "#f2f5fa"; font.pixelSize: 22; font.bold: true; Layout.fillWidth: true}
             ComboBox {
                 Layout.preferredWidth: 350
                 model: backend.fightChoices; textRole: "label"; valueRole: "id"
@@ -34,7 +34,7 @@ Window {
             }
             ComboBox {
                 Layout.preferredWidth: 190
-                model: backend.displayPlayers; textRole: "name"; valueRole: "id"
+                model: backend.detailChoices; textRole: "name"; valueRole: "id"
                 currentIndex: details.selectedPlayerIndex()
                 onActivated: backend.selectPlayer(currentValue)
             }
@@ -44,13 +44,13 @@ Window {
             Image {source: backend.classIcon(details.player.class || ""); sourceSize.width: 48; sourceSize.height: 48; Layout.preferredWidth: 44; Layout.preferredHeight: 44}
             ColumnLayout {
                 Layout.fillWidth: true; spacing: 3
-                Label {text: (details.player.name || "No player selected") + (details.player.class ? " · " + details.player.class : ""); color: "#ffffff"; font.pixelSize: 18; font.bold: true}
+                Label {text: (details.player.name || "No player selected") + (details.player.class ? " · " + details.player.class : "") + (details.player.enemy ? " · RIVAL" : ""); color: details.player.enemy ? "#ff9e9e" : "#ffffff"; font.pixelSize: 18; font.bold: true}
                 Label {text: ((details.fight.boss || {}).name || (details.fight.scene || {}).name || "Combat") + " · " + Number(details.fight.duration || 0).toFixed(1) + "s · " + (details.fight.active ? "Live" : details.fight.encounter || "Completed"); color: "#9eadc3"}
             }
             ColumnLayout {
                 spacing: 3
-                Label {text: details.number(details.player.damage) + " damage"; color: "#ffffff"; font.pixelSize: 18; font.bold: true; Layout.alignment: Qt.AlignRight}
-                Label {text: details.number(details.player.dps) + " DPS · " + details.percent(details.player.share) + " of party damage"; color: "#9ad9ec"; Layout.alignment: Qt.AlignRight}
+                Label {text: details.number(details.player.damage) + (details.player.enemy ? " damage to party" : " damage") + (details.player.damageTaken ? " · " + details.number(details.player.damageTaken) + " taken" : ""); color: "#ffffff"; font.pixelSize: 18; font.bold: true; Layout.alignment: Qt.AlignRight}
+                Label {text: details.number(details.player.dps) + " DPS · " + (details.player.criticalKnown ? "Crit " + details.percent(details.player.criticalRate) + " · " : "") + (details.player.maxHit ? "Max " + details.number(details.player.maxHit) + " · " : "") + details.percent(details.player.share) + (details.player.enemy ? " of rival damage" : " of party damage"); color: details.player.enemy ? "#ff9e9e" : "#9ad9ec"; Layout.alignment: Qt.AlignRight}
             }
         }
         Rectangle {Layout.fillWidth: true; implicitHeight: 1; color: "#42516a"}

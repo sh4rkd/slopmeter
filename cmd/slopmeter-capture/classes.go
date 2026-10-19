@@ -32,19 +32,22 @@ func className(code uint32) string {
 
 func (s *scope) observeClass(m aMessage) {
 	// Class-specific casts also identify healers/buffers before their first hit.
-	// Shared/unmapped skills and nearby players cannot provide evidence.
-	var actor game.Entity
+	// Shared/unmapped skills and nearby players cannot provide evidence, except
+	// when a player directly damages a party member in PvP.
+	var actor, target game.Entity
 	var skill game.Skill
 	switch event := m.event.(type) {
 	case game.Hit:
-		actor, skill = event.Actor, event.Skill
+		actor, target, skill = event.Actor, event.Target, event.Skill
 	case game.Cast:
-		actor, skill = event.Actor, event.Skill
+		actor, target, skill = event.Actor, event.Target, event.Skill
 	case game.CastEnd:
 		actor, skill = event.Actor, event.Skill
 	}
-	if actor != 0 && s.accepts(actor, m.t) && s.classes[actor] == "" {
-		s.setClass(actor, skillClasses[skill])
+	if actor != 0 && s.classes[actor] == "" {
+		if s.accepts(actor, m.t) || (target != 0 && s.accepts(target, m.t)) {
+			s.setClass(actor, skillClasses[skill])
+		}
 	}
 	if m.opcode != 0x3645 {
 		return
@@ -62,6 +65,10 @@ func (s *scope) observeClass(m aMessage) {
 			if n > 0 && n <= 72 && end+4 <= len(rest) && s.names[game.Entity(id)] == string(rest[2:end]) {
 				name := className(binary.LittleEndian.Uint32(rest[end:]))
 				if name != "" {
+					if s.players == nil {
+						s.players = make(map[game.Entity]bool)
+					}
+					s.players[game.Entity(id)] = true
 					s.setClass(game.Entity(id), name)
 					return
 				}

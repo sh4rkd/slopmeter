@@ -157,7 +157,7 @@ Window {
                     ToolTip.visible: hovered; ToolTip.text: "Last 10 fights · choose Current fight to return to live data"
                 }
                 ColumnLayout {
-                    Layout.fillWidth: true; visible: !!backend.boss.entity; spacing: backend.minimalistMode ? 1 : 3
+                    Layout.fillWidth: true; visible: !!backend.boss.entity && !backend.isPvP; spacing: backend.minimalistMode ? 1 : 3
                     Rectangle {
                         objectName: "targetHealthBar"
                         Layout.fillWidth: true; implicitHeight: backend.minimalistMode ? 18 : 26; radius: 4
@@ -237,10 +237,76 @@ Window {
                         ToolTip.text: "5:00 boss wipe limit · Elapsed " + meter.clock(elapsedSeconds) + " · Time left " + meter.clock(timeLeftSeconds) + (etaReady ? " · Est. remaining ~" + meter.clock(etaSeconds) + " · Projected total ~" + meter.clock(totalSeconds) : "") + " (projected total < 4:00 green · 4:00–5:00 yellow · > 5:00 red)"
                     }
                 }
+                ColumnLayout {
+                    id: pvpDuelSection
+                    objectName: "pvpDuelHeader"
+                    Layout.fillWidth: true; visible: backend.isPvP; spacing: backend.minimalistMode ? 1 : 3
+                    property real dealtDmg: Number(backend.pvpSummary.damageDealt || 0)
+                    property real takenDmg: Number(backend.pvpSummary.damageTaken || 0)
+                    property real dealtDps: Number(backend.pvpSummary.dealtDps || 0)
+                    property real takenDps: Number(backend.pvpSummary.takenDps || 0)
+                    property real dealtRatio: backend.pvpSummary.dealtShare !== undefined ? Number(backend.pvpSummary.dealtShare) : 50
+                    property string oppName: backend.pvpSummary.opponentName || "Opponent"
+                    property string outcome: backend.pvpSummary.outcome || ""
+                    Rectangle {
+                        Layout.fillWidth: true; implicitHeight: backend.minimalistMode ? 18 : 24; radius: 4
+                        color: backend.minimalistMode ? "transparent" : "#3b1f2b"
+                        border.width: backend.minimalistMode ? 0 : 1
+                        border.color: pvpDuelSection.outcome === "Victory" ? "#54cf82" : pvpDuelSection.outcome === "Defeat" ? "#ee6464" : "#803f52"
+                        Rectangle {
+                            visible: !backend.minimalistMode
+                            width: parent.width * Math.max(0, Math.min(100, pvpDuelSection.dealtRatio)) / 100
+                            height: parent.height; radius: 4; color: "#2b5b6c"
+                            Behavior on width { NumberAnimation { duration: 120 } }
+                        }
+                        RowLayout {
+                            anchors.fill: parent; anchors.leftMargin: backend.minimalistMode ? 2 : 6; anchors.rightMargin: backend.minimalistMode ? 2 : 6; spacing: 6
+                            Label {
+                                objectName: "pvpHeaderTitle"
+                                text: "⚔ PvP · vs " + pvpDuelSection.oppName + (pvpDuelSection.outcome ? " · " + pvpDuelSection.outcome.toUpperCase() : "")
+                                color: pvpDuelSection.outcome === "Victory" ? "#54cf82" : pvpDuelSection.outcome === "Defeat" ? "#ff8080" : "#ffd6de"
+                                font.pixelSize: 11; font.bold: true; Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight
+                            }
+                            Label {
+                                visible: !!backend.boss.entity && backend.boss.known
+                                color: "#fff1eb"; font.pixelSize: 10
+                                text: backend.boss.maxKnown ? meter.bossHpValueText(backend.boss.hp) + " HP (" + Number(backend.boss.percent).toFixed(0) + "%)" : meter.bossHpValueText(backend.boss.hp) + " HP"
+                            }
+                        }
+                    }
+                    Rectangle {
+                        objectName: "pvpExchangeBar"
+                        Layout.fillWidth: true; implicitHeight: backend.minimalistMode ? 18 : 22; radius: 4
+                        color: backend.minimalistMode ? "transparent" : "#222b3c"
+                        RowLayout {
+                            anchors.fill: parent; anchors.leftMargin: backend.minimalistMode ? 2 : 6; anchors.rightMargin: backend.minimalistMode ? 2 : 6; spacing: 6
+                            Label {
+                                objectName: "pvpDealtSummaryLabel"
+                                text: "Dealt " + (backend.minimalistMode ? meter.minimalistDamageText(pvpDuelSection.dealtDmg) : meter.compactNumber(pvpDuelSection.dealtDmg)) + " (" + meter.dpsText(pvpDuelSection.dealtDps) + "/s)"
+                                color: "#9ad9ec"; font.pixelSize: 10; font.bold: true
+                                Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight
+                            }
+                            Label {
+                                text: Math.round(pvpDuelSection.dealtRatio) + "% / " + Math.round(100 - pvpDuelSection.dealtRatio) + "%"
+                                color: pvpDuelSection.dealtDmg >= pvpDuelSection.takenDmg ? "#54cf82" : "#ff8e8e"
+                                font.pixelSize: 10; font.bold: true
+                            }
+                            Label {
+                                objectName: "pvpTakenSummaryLabel"
+                                text: "Taken " + (backend.minimalistMode ? meter.minimalistDamageText(pvpDuelSection.takenDmg) : meter.compactNumber(pvpDuelSection.takenDmg)) + " (" + meter.dpsText(pvpDuelSection.takenDps) + "/s)"
+                                color: "#ff9e9e"; font.pixelSize: 10; font.bold: true
+                                horizontalAlignment: Text.AlignRight; Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight
+                            }
+                        }
+                        HoverHandler {id: pvpHover}
+                        ToolTip.visible: pvpHover.hovered
+                        ToolTip.text: "Damage dealt: " + meter.number(pvpDuelSection.dealtDmg) + " (" + meter.number(pvpDuelSection.dealtDps) + " DPS) · Damage taken: " + meter.number(pvpDuelSection.takenDmg) + " (" + meter.number(pvpDuelSection.takenDps) + " DPS)"
+                    }
+                }
                 Label {
                     objectName: "combatStatus"
-                    Layout.fillWidth: true; horizontalAlignment: Text.AlignRight; elide: Text.ElideRight; color: "#8e9eb5"; font.pixelSize: 11
-                    text: (backend.sceneName ? backend.sceneName + " · " : "") + (backend.testMode ? "Test mode · " + meter.clock(backend.duration) : backend.detailFight.active ? "Combat · " + meter.clock(backend.duration) : backend.displayPlayers.length ? "Finished · " + meter.clock(backend.duration) : "Waiting for combat")
+                    Layout.fillWidth: true; horizontalAlignment: Text.AlignRight; elide: Text.ElideRight; color: backend.isPvP ? "#f2a6b8" : "#8e9eb5"; font.pixelSize: 11
+                    text: (backend.sceneName ? backend.sceneName + " · " : "") + (backend.testMode ? "Test mode · " + meter.clock(backend.duration) : backend.detailFight.active ? (backend.isPvP ? "PvP · " : "Combat · ") + meter.clock(backend.duration) : (backend.displayPlayers.length || backend.displayEnemies.length) ? (backend.isPvP ? "PvP Finished · " : "Finished · ") + meter.clock(backend.duration) : "Waiting for combat")
                     ToolTip.visible: combatHover.hovered; ToolTip.text: backend.encounter
                     HoverHandler {id: combatHover}
                 }
@@ -261,9 +327,15 @@ Window {
                         required property string actorClass
                         required property real gearScore
                         required property real combatPower
+                        required property real damageTaken
+                        required property real criticalRate
+                        required property bool criticalKnown
+                        required property real maxHit
                         property bool showGear: backend.scoreDisplay === 1 || backend.scoreDisplay === 3
                         property bool showPower: backend.scoreDisplay === 1 || backend.scoreDisplay === 2
                         property string gearText: (showGear && gearScore > 0 ? "GS " + meter.scoreValueText(gearScore) : "") + (showGear && gearScore > 0 && showPower && combatPower > 0 ? " · " : "") + (showPower && combatPower > 0 ? "CP " + meter.scoreValueText(combatPower) : "")
+                        property string pvpMetaText: backend.isPvP ? ((criticalKnown ? "Crit " + criticalRate.toFixed(0) + "%" : "") + (criticalKnown && maxHit > 0 ? " · " : "") + (maxHit > 0 ? "Max " + meter.scoreValueText(maxHit) : "") + ((criticalKnown || maxHit > 0) && damageTaken > 0 ? " · " : "") + (damageTaken > 0 ? "In " + meter.scoreValueText(damageTaken) : "")) : ""
+                        property string subLabelText: backend.isPvP && pvpMetaText.length > 0 ? pvpMetaText : gearText
                         required property real damage
                         required property real dps
                         required property real share
@@ -309,12 +381,12 @@ Window {
                                     font.bold: true; font.pixelSize: backend.minimalistMode ? 12 : 13; elide: Text.ElideRight
                                     Layout.fillWidth: true; Layout.minimumWidth: 0
                                     HoverHandler {id: nameHover}
-                                    ToolTip.visible: nameHover.hovered && (backend.minimalistMode || backend.barHeight < 38) && bar.gearText.length > 0
-                                    ToolTip.text: bar.gearText
+                                    ToolTip.visible: nameHover.hovered && ((backend.minimalistMode || backend.barHeight < 38) && bar.subLabelText.length > 0)
+                                    ToolTip.text: bar.subLabelText
                                 }
                                 Label {
-                                    visible: !backend.minimalistMode && backend.barHeight >= 38 && bar.gearText.length > 0
-                                    text: bar.gearText; color: "#e6edf6"; font.pixelSize: 11; elide: Text.ElideRight
+                                    visible: !backend.minimalistMode && backend.barHeight >= 38 && bar.subLabelText.length > 0
+                                    text: bar.subLabelText; color: "#e6edf6"; font.pixelSize: 11; elide: Text.ElideRight
                                     Layout.fillWidth: true; Layout.minimumWidth: 0
                                 }
                             }
@@ -329,7 +401,7 @@ Window {
                                 visible: backend.minimalistMode
                                 color: bar.textColor; font.pixelSize: 12; font.bold: true
                                 horizontalAlignment: Text.AlignRight
-                                text: (backend.showTotalDamage ? meter.minimalistDamageText(bar.damage) + " · " : "") + meter.dpsText(bar.dps) + " DPS" + (backend.showDetails ? " (" + bar.share.toFixed(1) + "%)" : "")
+                                text: (backend.showTotalDamage ? meter.minimalistDamageText(bar.damage) + " · " : "") + meter.dpsText(bar.dps) + " DPS" + (backend.isPvP && bar.criticalKnown ? " · " + bar.criticalRate.toFixed(0) + "%C" : (!backend.isPvP && backend.showDetails ? " (" + bar.share.toFixed(1) + "%)" : "")) + (backend.isPvP && bar.damageTaken > 0 ? " · -" + meter.minimalistDamageText(bar.damageTaken) : "")
                             }
                             ColumnLayout {
                                 visible: !backend.minimalistMode
@@ -339,13 +411,122 @@ Window {
                                     text: meter.dpsText(bar.dps) + " DPS"; color: "#ffffff"; font.bold: true; Layout.alignment: Qt.AlignRight
                                     HoverHandler {id: damageHover}
                                     ToolTip.visible: damageHover.hovered && backend.showTotalDamage && backend.barHeight < 38
-                                    ToolTip.text: meter.number(bar.damage) + " total damage"
+                                    ToolTip.text: meter.number(bar.damage) + " total damage" + (backend.isPvP && bar.damageTaken > 0 ? " · " + meter.number(bar.damageTaken) + " taken" : "")
                                 }
                                 Label { visible: (backend.showTotalDamage || backend.showDetails) && backend.barHeight >= 38; text: (backend.showTotalDamage ? meter.number(bar.damage) + " dmg" : "") + (backend.showTotalDamage && backend.showDetails ? " · " : "") + (backend.showDetails ? bar.share.toFixed(1) + "%" : ""); color: "#e6edf6"; font.pixelSize: 11; Layout.alignment: Qt.AlignRight }
                             }
                         }
                     }
                     Label { anchors.centerIn: parent; visible: bars.count === 0; text: "Waiting for your party's damage…"; color: "#8e9eb5"; font.pixelSize: 12 }
+                }
+                ColumnLayout {
+                    id: enemySection
+                    objectName: "enemySection"
+                    Layout.fillWidth: true
+                    visible: backend.isPvP && enemyBars.count > 0
+                    spacing: backend.minimalistMode ? 2 : 4
+                    RowLayout {
+                        Layout.fillWidth: true; spacing: 6
+                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: "#633240" }
+                        Label {
+                            objectName: "enemyDividerLabel"
+                            text: "RIVALS · INCOMING DAMAGE"
+                            color: "#ff9e9e"; font.pixelSize: 10; font.bold: true
+                        }
+                        Rectangle { Layout.fillWidth: true; implicitHeight: 1; color: "#633240" }
+                    }
+                    ListView {
+                        id: enemyBars; objectName: "enemyBars"
+                        Layout.fillWidth: true
+                        implicitHeight: count * panel.rowHeight + Math.max(0, count - 1) * backend.barSpacing
+                        Layout.preferredHeight: implicitHeight
+                        interactive: false; spacing: backend.barSpacing
+                        model: enemyModel
+                        delegate: Rectangle {
+                            id: enemyBar
+                            required property int index
+                            property color classTint: meter.classColor(actorClass)
+                            property color textColor: meter.classTextColor(actorClass)
+                            required property int actorId
+                            required property string actorName
+                            required property string actorClass
+                            required property real damage
+                            required property real damageTaken
+                            required property real dps
+                            required property real criticalRate
+                            required property bool criticalKnown
+                            required property real maxHit
+                            required property real share
+                            required property real fill
+                            property string rivalMeta: (criticalKnown ? "Crit " + criticalRate.toFixed(0) + "%" : "") + (criticalKnown && maxHit > 0 ? " · " : "") + (maxHit > 0 ? "Max " + meter.scoreValueText(maxHit) : "") + ((criticalKnown || maxHit > 0) && damageTaken > 0 ? " · " : "") + (damageTaken > 0 ? "Taken " + meter.scoreValueText(damageTaken) : "")
+                            TapHandler {onTapped: meter.openDetails(enemyBar.actorId)}
+                            HoverHandler {cursorShape: Qt.PointingHandCursor}
+                            width: ListView.view.width; height: panel.rowHeight; radius: 4
+                            color: backend.minimalistMode ? "transparent" : "#38222c"
+                            border.width: backend.minimalistMode ? 0 : 1
+                            border.color: "#6e3546"
+                            Rectangle {
+                                visible: !backend.minimalistMode
+                                width: parent.width * parent.fill / 100; height: parent.height; radius: 4
+                                color: actorClass ? Qt.tint(enemyBar.classTint, "#40c93b4b") : "#8a3847"
+                                Behavior on width { NumberAnimation { duration: 120 } }
+                            }
+                            RowLayout {
+                                anchors.fill: parent; anchors.leftMargin: backend.minimalistMode ? 2 : 6; anchors.rightMargin: backend.minimalistMode ? 2 : 8; spacing: backend.minimalistMode ? 5 : 7
+                                Label {
+                                    visible: backend.minimalistMode
+                                    text: "⚔"
+                                    color: "#ff8080"; font.pixelSize: 11; font.bold: true
+                                    Layout.preferredWidth: 16; horizontalAlignment: Text.AlignRight
+                                }
+                                Image {
+                                    source: backend.classIcon(enemyBar.actorClass)
+                                    sourceSize.width: 32; sourceSize.height: 32
+                                    Layout.preferredWidth: backend.minimalistMode ? 16 : Math.min(26, backend.barHeight - 6); Layout.preferredHeight: Layout.preferredWidth
+                                    ToolTip.visible: enemyIconHover.hovered; ToolTip.text: (enemyBar.actorClass || "Unknown class") + " · Rival (click for skill breakdown & timeline)"
+                                    HoverHandler { id: enemyIconHover }
+                                }
+                                ColumnLayout {
+                                    Layout.fillWidth: true; Layout.minimumWidth: 0; spacing: 0
+                                    Label {
+                                        objectName: "enemyNameLabel"
+                                        text: enemyBar.actorName
+                                        color: backend.minimalistMode ? (enemyBar.actorClass ? enemyBar.textColor : "#ff9e9e") : "#ffdbe2"
+                                        font.bold: true; font.pixelSize: backend.minimalistMode ? 12 : 13; elide: Text.ElideRight
+                                        Layout.fillWidth: true; Layout.minimumWidth: 0
+                                        HoverHandler { id: enemyNameHover }
+                                        ToolTip.visible: enemyNameHover.hovered && enemyBar.rivalMeta.length > 0
+                                        ToolTip.text: enemyBar.rivalMeta
+                                    }
+                                    Label {
+                                        visible: !backend.minimalistMode && backend.barHeight >= 38 && enemyBar.rivalMeta.length > 0
+                                        text: enemyBar.rivalMeta; color: "#f2c2cc"; font.pixelSize: 11; elide: Text.ElideRight
+                                        Layout.fillWidth: true; Layout.minimumWidth: 0
+                                    }
+                                }
+                                Label {
+                                    objectName: "enemyMinimalistStats"
+                                    visible: backend.minimalistMode
+                                    color: "#ff9e9e"; font.pixelSize: 12; font.bold: true
+                                    horizontalAlignment: Text.AlignRight
+                                    text: (backend.showTotalDamage ? meter.minimalistDamageText(enemyBar.damage) + " · " : "") + meter.dpsText(enemyBar.dps) + " DPS" + (enemyBar.criticalKnown ? " · " + enemyBar.criticalRate.toFixed(0) + "%C" : "") + (enemyBar.maxHit > 0 ? " · Max " + meter.minimalistDamageText(enemyBar.maxHit) : "")
+                                }
+                                ColumnLayout {
+                                    visible: !backend.minimalistMode
+                                    Layout.preferredWidth: backend.barHeight < 38 ? Math.max(80, enemyBar.width / 2 - 24) : implicitWidth
+                                    spacing: 0
+                                    Label {
+                                        text: meter.dpsText(enemyBar.dps) + " DPS"; color: "#ffdbe2"; font.bold: true; Layout.alignment: Qt.AlignRight
+                                    }
+                                    Label {
+                                        visible: (backend.showTotalDamage || backend.showDetails) && backend.barHeight >= 38
+                                        text: (backend.showTotalDamage ? meter.number(enemyBar.damage) + " dmg" : "") + (backend.showTotalDamage && backend.showDetails ? " · " : "") + (backend.showDetails ? enemyBar.share.toFixed(1) + "%" : "")
+                                        color: "#f2c2cc"; font.pixelSize: 11; Layout.alignment: Qt.AlignRight
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 RowLayout {
                     objectName: "meterFooter"

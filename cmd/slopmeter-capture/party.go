@@ -84,6 +84,10 @@ func (s *scope) confirm(id game.Entity, slot byte, name string, t time.Time) {
 	if s.names == nil {
 		s.names = make(map[game.Entity]string)
 	}
+	if s.players == nil {
+		s.players = make(map[game.Entity]bool)
+	}
+	s.players[id] = true
 	if slot != 0 {
 		for other, m := range s.members {
 			if other != id && m.slot == slot {
@@ -107,6 +111,7 @@ func (s *scope) observeMessage(m aMessage) {
 		s.members = nil
 		s.names = nil
 		s.classes = nil
+		s.players = nil
 		s.stats = nil
 	}
 	if m.opcode == 0x3623 && s.hintedSelf {
@@ -114,6 +119,7 @@ func (s *scope) observeMessage(m aMessage) {
 		s.name = ""
 		s.names = nil
 		s.classes = nil
+		s.players = nil
 		s.members = nil
 		s.stats = nil
 		s.hintedSelf = false
@@ -173,7 +179,11 @@ func (s *scope) observeMessage(m aMessage) {
 				if s.names == nil {
 					s.names = make(map[game.Entity]string)
 				}
+				if s.players == nil {
+					s.players = make(map[game.Entity]bool)
+				}
 				s.names[id] = name
+				s.players[id] = true
 			}
 		}
 	}
@@ -200,4 +210,11 @@ func (s *scope) accepts(id game.Entity, t time.Time) bool {
 	}
 	age := t.Sub(m.seen)
 	return age >= 0 && age <= memberLease
+}
+
+func (s *scope) isPlayer(id game.Entity) bool {
+	if id == 0 {
+		return false
+	}
+	return id == s.self || s.players[id] || s.classes[id] != ""
 }

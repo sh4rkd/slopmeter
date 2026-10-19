@@ -59,6 +59,12 @@ func (e *encounter) enterMap(t time.Time, id uint32, boundary bool) {
 }
 
 func (e *encounter) combatLabel() string {
+	if e.pvp {
+		if e.scene.Name != "" {
+			return e.scene.Name + " · PvP"
+		}
+		return "PvP Combat"
+	}
 	if e.scene.Name != "" {
 		return e.scene.Name + " · Combat"
 	}

@@ -88,6 +88,17 @@ func (h *combatHistory) enrichClasses(i identities) error {
 				changed = true
 			}
 		}
+		for rowIndex := range s.Enemies {
+			r := &s.Enemies[rowIndex]
+			if r.Class == "" && i.classes[r.ID] != "" && r.Name == i.names[r.ID] {
+				r.Class = i.classes[r.ID]
+				changed = true
+			}
+		}
+		if s.PvPSummary != nil && s.PvPSummary.OpponentClass == "" && s.PvPSummary.OpponentID != 0 && i.classes[s.PvPSummary.OpponentID] != "" && s.PvPSummary.OpponentName == i.names[s.PvPSummary.OpponentID] {
+			s.PvPSummary.OpponentClass = i.classes[s.PvPSummary.OpponentID]
+			changed = true
+		}
 	}
 	if !changed {
 		return nil
@@ -98,11 +109,15 @@ func (h *combatHistory) enrichClasses(i identities) error {
 
 func (h *combatHistory) archive(e *encounter, i identities, t time.Time) error {
 	state := e.snapshot(i, t)
-	if len(state.Actors) == 0 {
+	if len(state.Actors) == 0 && len(state.Enemies) == 0 {
 		return nil
 	}
 	state.History = nil
-	h.entries = append([]historyEntry{{Snapshot: state, Started: e.meter.first, Ended: t}}, h.entries...)
+	started := e.meter.first
+	if started.IsZero() || (!e.enemyMeter.first.IsZero() && e.enemyMeter.first.Before(started)) {
+		started = e.enemyMeter.first
+	}
+	h.entries = append([]historyEntry{{Snapshot: state, Started: started, Ended: t}}, h.entries...)
 	if len(h.entries) > 10 {
 		h.entries = h.entries[:10]
 	}

@@ -62,6 +62,9 @@ type timedCast struct {
 }
 type encounter struct {
 	manualReset       bool
+	pvp               bool
+	pvpOutcome        string
+	pvpTarget         game.Entity
 	resetBoundary     time.Time
 	metadataRevision  uint64
 	scene             sceneState
@@ -71,6 +74,7 @@ type encounter struct {
 	onFinish          func(*encounter, time.Time)
 	pendingCasts      []timedCast
 	meter             meter
+	enemyMeter        meter
 	filter            game.Entity
 	npcs              map[game.Entity]*npcState
 	boss              game.Entity
@@ -103,6 +107,10 @@ func (e *encounter) start(t time.Time, boss game.Entity) {
 		target = boss
 	}
 	e.meter = meter{target: target}
+	e.enemyMeter = meter{}
+	e.pvp = false
+	e.pvpOutcome = ""
+	e.pvpTarget = 0
 	e.targetMeters = make(map[game.Entity]*meter)
 	e.boss = boss
 	e.lastTarget = 0
@@ -139,6 +147,10 @@ func (e *encounter) finish(t time.Time, status string, clear bool) {
 	e.pendingCasts = nil
 	if clear {
 		e.meter = meter{target: e.filter}
+		e.enemyMeter = meter{}
+		e.pvp = false
+		e.pvpOutcome = ""
+		e.pvpTarget = 0
 		e.targetMeters = nil
 		e.boss = 0
 		e.lastTarget = 0
@@ -199,6 +211,72 @@ func (e *encounter) hit(t time.Time, h game.Hit) {
 	}
 	if t.After(e.lastDamage) {
 		e.lastDamage = t
+	}
+}
+func (e *encounter) pvpHit(t time.Time, h game.Hit, outgoing bool) {
+	if (!e.resetBoundary.IsZero() && !t.After(e.resetBoundary)) || h.Damage == 0 {
+		return
+	}
+	if e.filter != 0 && h.Target != e.filter && h.Actor != e.filter {
+		return
+	}
+	if !e.lastDamage.IsZero() && t.Before(e.lastDamage) && !e.active {
+		return
+	}
+	e.tick(t)
+	if e.active && e.boss != 0 {
+		// Do not hijack a confirmed boss fight into PvP, but still record incoming player damage if needed.
+		return
+	}
+	if !e.active {
+		e.start(t, 0)
+	}
+	if !e.pvp {
+		e.pvp = true
+		e.status = e.combatLabel()
+	}
+	if e.meter.first.IsZero() || t.Before(e.meter.first) {
+		e.meter.first = t
+	}
+	if t.After(e.meter.last) {
+		e.meter.last = t
+	}
+	if e.enemyMeter.first.IsZero() || t.Before(e.enemyMeter.first) {
+		e.enemyMeter.first = t
+	}
+	if t.After(e.enemyMeter.last) {
+		e.enemyMeter.last = t
+	}
+	if outgoing {
+		e.meter.add(t, h)
+		enemy := e.enemyMeter.actor(h.Target)
+		enemy.damageTaken += uint64(h.Damage)
+		e.pvpTarget = h.Target
+		if !t.Before(e.lastDamage) {
+			e.lastTarget = h.Target
+		}
+	} else {
+		e.enemyMeter.add(t, h)
+		ally := e.meter.actor(h.Target)
+		ally.damageTaken += uint64(h.Damage)
+		if e.pvpTarget == 0 {
+			e.pvpTarget = h.Actor
+		}
+	}
+	if t.After(e.lastDamage) {
+		e.lastDamage = t
+	}
+}
+func (e *encounter) enemyCast(t time.Time, c game.Cast) {
+	if !e.resetBoundary.IsZero() && !t.After(e.resetBoundary) {
+		return
+	}
+	if !e.ended.IsZero() && !t.After(e.ended) {
+		return
+	}
+	e.tick(t)
+	if e.active && e.pvp {
+		e.enemyMeter.cast(c, t)
 	}
 }
 func (e *encounter) cast(t time.Time, c game.Cast) {
@@ -364,6 +442,17 @@ func (e *encounter) observe(m aMessage) {
 	}
 	if death, ok := m.event.(game.Death); ok && death.Flag == 3 && death.Entity != e.boss {
 		e.health(m.t, death.Entity, 0, 0)
+		if e.active && e.pvp {
+			if e.enemyMeter.actors[death.Entity] != nil || death.Entity == e.pvpTarget {
+				e.pvpOutcome = "Victory"
+				e.status = "PvP Victory"
+				e.metadataRevision++
+			} else if e.meter.actors[death.Entity] != nil {
+				e.pvpOutcome = "Defeat"
+				e.status = "PvP Defeat"
+				e.metadataRevision++
+			}
+		}
 	}
 	if death, ok := m.event.(game.Death); ok && death.Entity == e.boss && e.active {
 		if death.Flag == 3 {
@@ -453,36 +542,103 @@ func (e *encounter) observe(m aMessage) {
 }
 func (e *encounter) snapshot(i identities, t time.Time) snapshot {
 	m := e.meter
-	if !m.first.IsZero() {
+	em := e.enemyMeter
+	first := m.first
+	if first.IsZero() || (!em.first.IsZero() && em.first.Before(first)) {
+		first = em.first
+	}
+	last := m.last
+	if em.last.After(last) {
+		last = em.last
+	}
+	if !first.IsZero() {
 		end := e.ended
 		if e.active {
 			end = t
 		}
-		if end.Before(m.last) {
-			end = m.last
+		if end.Before(last) {
+			end = last
 		}
+		m.first = first
 		m.last = end
+		em.first = first
+		em.last = end
 	}
 	s := m.snapshot(i)
 	s.Session = e.number
 	s.Cleared = e.manualReset
 	s.Encounter = e.status
 	s.Active = e.active
+	s.PvP = e.pvp
 	s.Scene = e.scene.sceneDisplay
-	if !e.meter.first.IsZero() {
+	if !first.IsZero() {
 		s.Scene = e.fightScene
 	}
-	if e.boss != 0 {
+	if e.pvp {
+		s.Enemies = em.rows(i, s.Duration, true)
+		if len(s.Actors) == 0 && i.self != 0 {
+			if selfActor := m.actors[i.self]; selfActor != nil && selfActor.damageTaken > 0 {
+				name := i.names[i.self]
+				if name == "" {
+					name = i.name
+				}
+				if name == "" {
+					name = "You"
+				}
+				s.Actors = []row{{
+					ID:          i.self,
+					Name:        name,
+					Class:       i.classes[i.self],
+					DamageTaken: selfActor.damageTaken,
+					Skills:      []skillRow{},
+				}}
+			}
+		}
+		var dealt, taken uint64
+		for _, a := range m.actors {
+			dealt += a.damage
+			taken += a.damageTaken
+		}
+		seconds := max(1.0, s.Duration)
+		share := 50.0
+		if dealt+taken > 0 {
+			share = float64(dealt) / float64(dealt+taken) * 100
+		}
+		oppID := e.pvpTarget
+		if len(s.Enemies) > 0 {
+			oppID = s.Enemies[0].ID
+		}
+		oppName := i.names[oppID]
+		if oppName == "" && oppID != 0 {
+			oppName = "Player"
+		}
+		s.PvPSummary = &pvpDisplay{
+			OpponentID:    oppID,
+			OpponentName:  oppName,
+			OpponentClass: i.classes[oppID],
+			DamageDealt:   dealt,
+			DamageTaken:   taken,
+			DealtDPS:      float64(dealt) / seconds,
+			TakenDPS:      float64(taken) / seconds,
+			DealtShare:    share,
+			Outcome:       e.pvpOutcome,
+		}
+		if oppID != 0 {
+			if n := e.targets[oppID]; n != nil && n.known {
+				s.Boss = e.bossSnapshot(oppID, i)
+			}
+		}
+	} else if e.boss != 0 {
 		s.Boss = e.bossSnapshot(e.boss, i)
 	} else if e.lastTarget != 0 && e.npcs[e.lastTarget] != nil {
 		// Identity can arrive after the last hit. Show its captured HP immediately
 		// without waiting for another damage event or showing ordinary monsters.
 		s.Boss = e.bossSnapshot(e.lastTarget, i)
 	}
-	if s.Boss != nil {
+	if s.Boss != nil && !e.pvp {
 		s.Boss.TimeLeft = max(0, bossTimeLimitSeconds-s.Duration)
 	}
-	if s.Boss != nil && s.Boss.Known {
+	if s.Boss != nil && s.Boss.Known && !e.pvp {
 		if s.Boss.HP == 0 {
 			s.Boss.ETA = 0
 			s.Boss.TotalETA = s.Duration
