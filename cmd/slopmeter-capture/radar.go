@@ -23,6 +23,7 @@ const (
 	radarCategoryOre      radarCategory = "ore"
 	radarCategoryHerb     radarCategory = "herb"
 	radarCategoryWood     radarCategory = "wood"
+	radarCategoryResource radarCategory = "resource"
 	radarCategoryObject   radarCategory = "object"
 )
 
@@ -312,8 +313,24 @@ func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, r
 			return inlineName, radarCategoryHerb, true
 		}
 	}
-	// Hidden Cube ID ranges in Aion 2 (1200000–1200099 Elyos Hidden Cubes, 1301190–1301210 Asmodian Hidden Cubes)
-	if (code >= 1200000 && code <= 1200099) || (code >= 1301190 && code <= 1301210) {
+	// Hidden Cube ID ranges across all zones in Aion 2 (1200000–1499999 Elyos, Asmodian, Abyss)
+	if code >= 1200000 && code <= 1499999 {
+		name := inlineName
+		if name == "" {
+			name = fmt.Sprintf("Hidden Cube (%d)", code)
+		}
+		return name, radarCategoryChest, true
+	}
+	// 2900000–2929999 interactive field objects / chests / supply
+	if code >= 2900000 && code <= 2929999 {
+		name := inlineName
+		if name == "" {
+			name = fmt.Sprintf("Hidden Cube / Chest (%d)", code)
+		}
+		return name, radarCategoryChest, true
+	}
+	// 700000–799999 interactive cubes / chests
+	if code >= 700000 && code <= 799999 {
 		name := inlineName
 		if name == "" {
 			name = fmt.Sprintf("Hidden Cube (%d)", code)
@@ -353,20 +370,20 @@ func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, r
 		return name, radarCategoryGem, true
 	}
 	// Herb / Flower / Ingredient GatherSource ranges
-	if (code >= 1080600 && code <= 1081099) || (code >= 1090600 && code <= 1091099) {
+	if (code >= 1080600 && code <= 1081999) || (code >= 1090600 && code <= 1091999) {
 		name := inlineName
 		if name == "" {
 			name = fmt.Sprintf("Herb / Plant (%d)", code)
 		}
 		return name, radarCategoryHerb, true
 	}
-	// 2900000–2909999 interactive field objects / chests
-	if code >= 2900000 && code <= 2909999 {
+	// All other GatherSource ranges in 1000000..1199999 and 1500000..1599999 -> radarCategoryHerb
+	if (code >= 1000000 && code <= 1199999) || (code >= 1500000 && code <= 1599999) {
 		name := inlineName
 		if name == "" {
-			name = fmt.Sprintf("Hidden Cube / Chest (%d)", code)
+			name = fmt.Sprintf("Herb / Plant (%d)", code)
 		}
-		return name, radarCategoryChest, true
+		return name, radarCategoryHerb, true
 	}
 	// If it's a confirmed boss, do not clutter the object scanner.
 	if _, isBoss := bossCatalog[code]; isBoss {
@@ -577,39 +594,51 @@ func (e *encounter) observeRadarSpawn(t time.Time, opcode wire.Opcode, payload [
 		var inlineName string
 		if gate&1 != 0 {
 			nameLen := int(rest[offset])
-			if nameLen > 0 && nameLen <= 128 && offset+1+nameLen+4+2+12 <= len(rest) {
+			if nameLen == 0 {
+				offset++
+			} else if nameLen > 0 && nameLen <= 128 && offset+1+nameLen+4+12 <= len(rest) {
 				candidate := rest[offset+1 : offset+1+nameLen]
 				if utf8.Valid(candidate) {
 					inlineName = string(candidate)
 					offset = offset + 1 + nameLen
 				}
-			}
-			if inlineName == "" {
+			} else {
 				length, tail, valid := readVar(rest[offset:])
-				if valid && length > 0 && length <= 128 && uint32(len(tail)) >= length {
-					nameBytes := tail[:length]
-					if utf8.Valid(nameBytes) {
-						inlineName = string(nameBytes)
-						offset = len(rest) - len(tail) + int(length)
+				if valid && length <= 128 && uint32(len(tail)) >= length {
+					if length > 0 {
+						nameBytes := tail[:length]
+						if utf8.Valid(nameBytes) {
+							inlineName = string(nameBytes)
+						}
 					}
+					offset = len(rest) - len(tail) + int(length)
 				}
 			}
-			if inlineName == "" {
-				continue
-			}
 		}
-		if offset+4+2+12 > len(rest) {
+		if offset+4+12 > len(rest) {
 			continue
 		}
 		code := binary.LittleEndian.Uint32(rest[offset : offset+4])
 		if code == 0 || code > 99_999_999 {
 			continue
 		}
-		pos, valid := readVec3LE(rest[offset+6 : offset+18])
-		if !valid {
+		var foundPos game.Pos
+		var hasPos bool
+		// Standard subpacket layout has 2B subtype then 12B pos at offset+6 (skip=2).
+		// Try skip=2 first, then alternatives (0, 4, 6, 8).
+		for _, skip := range []int{2, 0, 4, 6, 8} {
+			if offset+4+skip+12 <= len(rest) {
+				if pos, valid := readVec3LE(rest[offset+4+skip : offset+4+skip+12]); valid {
+					foundPos = pos
+					hasPos = true
+					break
+				}
+			}
+		}
+		if !hasPos {
 			continue
 		}
-		e.radar.upsertEntity(t, game.Entity(id), code, mask, inlineName, pos)
+		e.radar.upsertEntity(t, game.Entity(id), code, mask, inlineName, foundPos)
 		return
 	}
 }

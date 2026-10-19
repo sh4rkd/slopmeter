@@ -232,7 +232,7 @@ public:
         if(cat=="odyle") return "#6be0ff";
         if(cat=="gem") return "#e082ff";
         if(cat=="ore") return "#ff9f5a";
-        if(cat=="herb") return "#7be35a";
+        if(cat=="herb" || cat=="resource") return "#7be35a";
         if(cat=="wood") return "#c89b6e";
         return "#c0cbdc";
     }
@@ -241,7 +241,7 @@ public:
         if(cat=="odyle") return "✦";
         if(cat=="gem") return "◆";
         if(cat=="ore") return "⬡";
-        if(cat=="herb") return "❖";
+        if(cat=="herb" || cat=="resource") return "❖";
         if(cat=="wood") return "▤";
         return "○";
     }
@@ -425,9 +425,9 @@ public:
                 (cat=="odyle" && radarOdyleSetting) ||
                 (cat=="gem" && radarGemsSetting) ||
                 (cat=="ore" && radarOresSetting) ||
-                (cat=="herb" && radarHerbsSetting) ||
+                (cat=="herb" && (radarHerbsSetting || radarResources())) ||
                 (cat=="wood" && radarWoodSetting) ||
-                (cat=="resource" && radarResources()) ||
+                (cat=="resource" && (radarHerbsSetting || radarResources())) ||
                 (cat=="object" && radarOtherSetting);
             if(!catMatch) continue;
             if(!radarItemFilterSetting.isEmpty() && !name.contains(radarItemFilterSetting, Qt::CaseInsensitive)) continue;

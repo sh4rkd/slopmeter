@@ -211,3 +211,35 @@ func TestRadarClientMovementAndByteInlineName(t *testing.T) {
 	}
 }
 
+func TestRadarBroadRangesClassification(t *testing.T) {
+	cases := []struct {
+		code     uint32
+		wantCat  radarCategory
+		wantName string
+	}{
+		{1200550, radarCategoryChest, "Hidden Cube (1200550)"},
+		{1305100, radarCategoryChest, "Hidden Cube (1305100)"},
+		{2900150, radarCategoryChest, "Hidden Cube / Chest (2900150)"},
+		{700100, radarCategoryChest, "Hidden Cube (700100)"},
+		{1081500, radarCategoryHerb, "Herb / Plant (1081500)"},
+		{1050000, radarCategoryHerb, "Herb / Plant (1050000)"},
+		{1580050, radarCategoryOdyle, "Odyle (1580050)"},
+		{1080550, radarCategoryGem, "Gemstone (1080550)"},
+		{1080150, radarCategoryOre, "Orichalcum Ore (1080150)"},
+		{1080250, radarCategoryWood, "Wood Log (1080250)"},
+	}
+
+	for _, tc := range cases {
+		name, cat, ok := classifyRadarTarget(tc.code, 0, "")
+		if !ok {
+			t.Errorf("code %d: expected ok=true, got false", tc.code)
+		}
+		if cat != tc.wantCat {
+			t.Errorf("code %d: expected cat %s, got %s", tc.code, tc.wantCat, cat)
+		}
+		if name != tc.wantName {
+			t.Errorf("code %d: expected name %s, got %s", tc.code, tc.wantName, name)
+		}
+	}
+}
+
