@@ -50,6 +50,36 @@ Window {
             CheckBox {objectName: "radarOtherToggle"; visible: false; checked: false; onToggled: backend.radarOther = checked}
             Label {text: "PvP Duel / Combate entre Jugadores"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
             CheckBox {objectName: "pvpEnabledToggle"; palette.windowText: "#e6edf6"; text: "Activar modo PvP (barra de rivales, daño recibido vs infligido y duelo)"; checked: backend.pvpEnabled; onToggled: backend.pvpEnabled = checked}
+            Label {text: "Alertas y Horarios de Eventos Aion 2"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
+            CheckBox {objectName: "eventAlertsEnabledToggle"; palette.windowText: "#e6edf6"; text: "Activar sistema de alertas de eventos periódicos"; checked: backend.eventAlertsEnabled; onToggled: backend.eventAlertsEnabled = checked}
+            CheckBox {objectName: "eventSoundToggle"; Layout.leftMargin: 20; visible: backend.eventAlertsEnabled; palette.windowText: "#54cf82"; text: "Reproducir sonido de alerta en eventos próximos"; checked: backend.eventSoundEnabled; onToggled: backend.eventSoundEnabled = checked}
+            RowLayout {
+                Layout.leftMargin: 20; visible: backend.eventAlertsEnabled; Layout.fillWidth: true; spacing: 8
+                Label {text: "Minutos de anticipación para avisar:"; color: "#c0cbdc"}
+                SpinBox {
+                    id: leadSpinBox
+                    objectName: "eventLeadMinutesSpinBox"
+                    from: 1; to: 30; stepSize: 1
+                    value: backend.eventAlertLeadMinutes
+                    onValueModified: backend.eventAlertLeadMinutes = value
+                }
+                Button {
+                    text: "Probar Sonido"; onClicked: backend.playAlertSound("event")
+                }
+            }
+            Label {text: "Eventos a rastrear individualmente:"; visible: backend.eventAlertsEnabled; color: "#9eadc3"; Layout.leftMargin: 20; font.pixelSize: 11}
+            Repeater {
+                model: backend.eventSchedule
+                delegate: CheckBox {
+                    required property var modelData
+                    Layout.leftMargin: 24
+                    visible: backend.eventAlertsEnabled
+                    palette.windowText: "#e6edf6"
+                    text: (modelData.icon || "") + " " + modelData.name + " (" + modelData.startTime + " · cada " + modelData.windowDuration + ")"
+                    checked: modelData.tracked
+                    onToggled: backend.setEventTracked(modelData.id, checked)
+                }
+            }
             Label {text: "Player bar information"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
             Label {text: "Gear score / combat power"; color: "#c0cbdc"}
             ComboBox {

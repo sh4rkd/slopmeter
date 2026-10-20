@@ -151,6 +151,14 @@ Window {
                         onClicked: backend.radarEnabled = !backend.radarEnabled
                         ToolTip.visible: hovered; ToolTip.text: backend.radarEnabled ? "Radar detector ON (Hidden Cubes)" : "Toggle Radar detector (Hidden Cubes)"
                     }
+                    Button {
+                        objectName: "eventsToggleButton"
+                        text: "⏰"
+                        implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32
+                        palette.buttonText: backend.eventAlertsEnabled ? "#f1c778" : "#7e8ea6"
+                        onClicked: eventScheduleDrawer.visible = !eventScheduleDrawer.visible
+                        ToolTip.visible: hovered; ToolTip.text: "Horarios y Alertas de Eventos Aion 2 (Shugo, Rift, Invasión, Bosses)"
+                    }
                     Button { objectName: "settingsButton"; text: "⚙"; implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32; onClicked: meter.openSettings(); ToolTip.visible: hovered; ToolTip.text: "Meter settings" }
                     Button { objectName: "resetDamageButton"; text: "↻"; implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32; onClicked: backend.resetDamage(); ToolTip.visible: hovered; ToolTip.text: "Reset current fight damage"; Accessible.name: "Reset current fight damage" }
                     Button { objectName: "minimizeButton"; text: "−"; implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32; onClicked: backend.hide(); ToolTip.visible: hovered; ToolTip.text: "Hide; restore from the tray or launch SlopMeter again" }
@@ -609,6 +617,153 @@ Window {
                                 Layout.fillWidth: true
                                 text: "Escaneando mapa…\nsin objetivos en rango"
                                 color: "#7e8ea6"; font.pixelSize: 10; horizontalAlignment: Text.AlignHCenter
+                            }
+                        }
+                    }
+                }
+                // Banner interactivo de Alerta de Evento (Aviso sonoro + visual llamativo)
+                Rectangle {
+                    id: eventAlertBanner
+                    objectName: "eventAlertBanner"
+                    visible: !!backend.activeEventAlert.id
+                    Layout.fillWidth: true
+                    implicitHeight: alertCol.implicitHeight + 10
+                    radius: 4
+                    color: backend.minimalistMode ? Qt.rgba(48/255, 32/255, 16/255, 0.92) : "#2c1f10"
+                    border.width: 1.5
+                    border.color: "#f1c778"
+                    ColumnLayout {
+                        id: alertCol
+                        anchors.fill: parent; anchors.margins: 6; spacing: 3
+                        RowLayout {
+                            Layout.fillWidth: true; spacing: 6
+                            Label {
+                                text: backend.activeEventAlert.icon || "⏰"
+                                font.pixelSize: 14
+                            }
+                            Label {
+                                text: "¡EVENTO PRÓXIMO EN " + (backend.activeEventAlert.timeLeftStr || (backend.eventAlertLeadMinutes + "m")) + "!"
+                                color: "#f1c778"; font.pixelSize: 11; font.bold: true
+                                Layout.fillWidth: true
+                            }
+                            Rectangle {
+                                width: 18; height: 18; radius: 9; color: "#3d2b17"
+                                border.width: 1; border.color: "#8c6b32"
+                                Label { anchors.centerIn: parent; text: "×"; color: "#f1c778"; font.pixelSize: 11; font.bold: true }
+                                TapHandler {
+                                    onTapped: backend.dismissEventAlert()
+                                }
+                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                            }
+                        }
+                        Label {
+                            text: (backend.activeEventAlert.name || "Evento") + " empieza a las " + (backend.activeEventAlert.startTime || "")
+                            color: "#ffffff"; font.pixelSize: 10; font.bold: true
+                            Layout.leftMargin: 20
+                        }
+                    }
+                }
+                // Panel Desplegable de Horarios de Eventos
+                Rectangle {
+                    id: eventScheduleDrawer
+                    objectName: "eventScheduleDrawer"
+                    visible: false
+                    Layout.fillWidth: true
+                    implicitHeight: schedCol.implicitHeight + 10
+                    radius: 4
+                    color: backend.minimalistMode ? Qt.rgba(20/255, 28/255, 40/255, 0.90) : "#151e2b"
+                    border.width: 1; border.color: "#354963"
+                    ColumnLayout {
+                        id: schedCol
+                        anchors.fill: parent; anchors.margins: 6; spacing: 4
+                        RowLayout {
+                            Layout.fillWidth: true; spacing: 6
+                            Label {
+                                text: "⏰ HORARIOS DE EVENTOS AION 2"
+                                color: "#f1c778"; font.pixelSize: 10; font.bold: true
+                                Layout.fillWidth: true
+                            }
+                            Rectangle {
+                                implicitWidth: leadLbl.implicitWidth + 8; implicitHeight: 18; radius: 3
+                                color: "#1f2b3d"; border.width: 1; border.color: "#475e7d"
+                                Label {
+                                    id: leadLbl; anchors.centerIn: parent
+                                    text: "Aviso: " + backend.eventAlertLeadMinutes + "m"
+                                    color: "#9ad9ec"; font.pixelSize: 9; font.bold: true
+                                }
+                                TapHandler {
+                                    onTapped: {
+                                        if (backend.eventAlertLeadMinutes <= 3) backend.eventAlertLeadMinutes = 5
+                                        else if (backend.eventAlertLeadMinutes <= 5) backend.eventAlertLeadMinutes = 10
+                                        else if (backend.eventAlertLeadMinutes <= 10) backend.eventAlertLeadMinutes = 15
+                                        else backend.eventAlertLeadMinutes = 3
+                                    }
+                                }
+                                HoverHandler { id: leadHover; cursorShape: Qt.PointingHandCursor }
+                                ToolTip.visible: leadHover.hovered; ToolTip.text: "Cambiar anticipación de la alerta (3m / 5m / 10m / 15m antes del evento)"
+                            }
+                            Rectangle {
+                                implicitWidth: sndLbl.implicitWidth + 8; implicitHeight: 18; radius: 3
+                                color: backend.eventSoundEnabled ? "#233d2f" : "#332222"
+                                border.width: 1; border.color: backend.eventSoundEnabled ? "#54cf82" : "#8c4444"
+                                Label {
+                                    id: sndLbl; anchors.centerIn: parent
+                                    text: backend.eventSoundEnabled ? "🔊 Sonido" : "🔇 Silencio"
+                                    color: backend.eventSoundEnabled ? "#54cf82" : "#ff9e9e"
+                                    font.pixelSize: 9; font.bold: true
+                                }
+                                TapHandler {
+                                    onTapped: backend.eventSoundEnabled = !backend.eventSoundEnabled
+                                }
+                                HoverHandler { id: sndHover; cursorShape: Qt.PointingHandCursor }
+                                ToolTip.visible: sndHover.hovered; ToolTip.text: "Activar/desactivar sonido de alerta de eventos"
+                            }
+                        }
+                        Repeater {
+                            model: backend.eventSchedule
+                            delegate: Rectangle {
+                                required property var modelData
+                                Layout.fillWidth: true
+                                implicitHeight: 26
+                                radius: 3
+                                color: modelData.tracked ? "#1c2637" : "#141a24"
+                                border.width: 1
+                                border.color: modelData.tracked ? (modelData.secsLeft <= (backend.eventAlertLeadMinutes * 60) ? "#f1c778" : "#2f4057") : "#222c3b"
+                                RowLayout {
+                                    anchors.fill: parent; anchors.leftMargin: 6; anchors.rightMargin: 6; spacing: 6
+                                    Label {
+                                        text: modelData.icon || "•"
+                                        font.pixelSize: 12
+                                    }
+                                    Label {
+                                        text: modelData.name
+                                        color: modelData.tracked ? "#ffffff" : "#6a798f"
+                                        font.pixelSize: 10; font.bold: modelData.tracked
+                                        Layout.fillWidth: true; Layout.minimumWidth: 0; elide: Text.ElideRight
+                                    }
+                                    Label {
+                                        text: modelData.startTime + " (" + modelData.startDate + ")"
+                                        color: "#8fa1b8"; font.pixelSize: 9
+                                    }
+                                    Rectangle {
+                                        implicitWidth: timeBadge.implicitWidth + 8; implicitHeight: 16; radius: 3
+                                        color: modelData.secsLeft <= (backend.eventAlertLeadMinutes * 60) ? "#422e16" : "#162233"
+                                        border.width: 1
+                                        border.color: modelData.secsLeft <= (backend.eventAlertLeadMinutes * 60) ? "#f1c778" : "#2f435c"
+                                        Label {
+                                            id: timeBadge; anchors.centerIn: parent
+                                            text: modelData.timeLeftStr
+                                            color: modelData.secsLeft <= (backend.eventAlertLeadMinutes * 60) ? "#f1c778" : "#9ad9ec"
+                                            font.pixelSize: 9; font.bold: true
+                                        }
+                                    }
+                                    CheckBox {
+                                        checked: modelData.tracked
+                                        implicitWidth: 18; implicitHeight: 18
+                                        onToggled: backend.setEventTracked(modelData.id, checked)
+                                        ToolTip.visible: hovered; ToolTip.text: "Activar o desactivar alerta y rastreo para este evento"
+                                    }
+                                }
                             }
                         }
                     }

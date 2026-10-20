@@ -120,6 +120,11 @@ class Bridge : public QObject {
     Q_PROPERTY(int radarSelectedId READ radarSelectedId WRITE setRadarSelectedId NOTIFY radarSelectionChanged)
     Q_PROPERTY(double radarRangeMeters READ radarRangeMeters WRITE setRadarRangeMeters NOTIFY radarRangeChanged)
     Q_PROPERTY(QString radarSubmenu READ radarSubmenu WRITE setRadarSubmenu NOTIFY radarSubmenuChanged)
+    Q_PROPERTY(bool eventAlertsEnabled READ eventAlertsEnabled WRITE setEventAlertsEnabled NOTIFY eventAlertsChanged)
+    Q_PROPERTY(bool eventSoundEnabled READ eventSoundEnabled WRITE setEventSoundEnabled NOTIFY eventAlertsChanged)
+    Q_PROPERTY(int eventAlertLeadMinutes READ eventAlertLeadMinutes WRITE setEventAlertLeadMinutes NOTIFY eventAlertsChanged)
+    Q_PROPERTY(QVariantList eventSchedule READ eventSchedule NOTIFY eventAlertsChanged)
+    Q_PROPERTY(QVariantMap activeEventAlert READ activeEventAlert NOTIFY eventAlertsChanged)
     Q_PROPERTY(QVariantMap detailPlayer READ detailPlayer NOTIFY detailChanged)
     Q_PROPERTY(QVariantMap detailFight READ detailFight NOTIFY detailChanged)
     Q_PROPERTY(bool testMode READ testMode WRITE setTestMode NOTIFY testModeChanged)
@@ -402,6 +407,195 @@ public:
     QJsonObject pending;
     QTimer publish;
     QTimer x11RaiseTimer;
+    QTimer eventTimer;
+    QSet<QString> triggeredEventAlerts;
+    QVariantMap currentActiveAlert;
+    QDateTime currentActiveAlertUntil;
+    bool eventAlertsEnabledSetting=QSettings().value("events/enabled",true).toBool();
+    bool eventSoundEnabledSetting=QSettings().value("events/soundEnabled",true).toBool();
+    int eventAlertLeadMinutesSetting=QSettings().value("events/leadMinutes",5).toInt();
+    bool eventAlertsEnabled() const {return eventAlertsEnabledSetting;}
+    void setEventAlertsEnabled(bool val) {if(eventAlertsEnabledSetting==val) return;eventAlertsEnabledSetting=val;QSettings().setValue("events/enabled",val);emit eventAlertsChanged();}
+    bool eventSoundEnabled() const {return eventSoundEnabledSetting;}
+    void setEventSoundEnabled(bool val) {if(eventSoundEnabledSetting==val) return;eventSoundEnabledSetting=val;QSettings().setValue("events/soundEnabled",val);emit eventAlertsChanged();}
+    int eventAlertLeadMinutes() const {return qBound(1,eventAlertLeadMinutesSetting,60);}
+    void setEventAlertLeadMinutes(int val) {val=qBound(1,val,60);if(eventAlertLeadMinutesSetting==val) return;eventAlertLeadMinutesSetting=val;QSettings().setValue("events/leadMinutes",val);emit eventAlertsChanged();}
+    Q_INVOKABLE bool isEventTracked(const QString &eventId) const {
+        return QSettings().value("events/track_"+eventId, true).toBool();
+    }
+    Q_INVOKABLE void setEventTracked(const QString &eventId, bool val) {
+        QSettings().setValue("events/track_"+eventId, val);
+        emit eventAlertsChanged();
+    }
+    Q_INVOKABLE void playAlertSound(const QString &soundType="event") {
+        QString soundPath = (soundType=="boss") ? ":/sounds/boss_alert.wav" : ":/sounds/event_alert.wav";
+        // Extract resource to temporary file if playing with external player
+        QString tempWav = QDir::tempPath() + (soundType=="boss" ? "/slopmeter_boss.wav" : "/slopmeter_event.wav");
+        if (!QFile::exists(tempWav)) {
+            QFile res(soundPath);
+            if (res.open(QIODevice::ReadOnly)) {
+                QFile out(tempWav);
+                if (out.open(QIODevice::WriteOnly)) {
+                    out.write(res.readAll());
+                    out.close();
+                }
+                res.close();
+            }
+        }
+        // Play asynchronously
+        QProcess::startDetached("canberra-gtk-play", {"-f", tempWav});
+    }
+    Q_INVOKABLE void dismissEventAlert() {
+        currentActiveAlert.clear();
+        emit eventAlertsChanged();
+    }
+    QVariantMap activeEventAlert() const {
+        if (!currentActiveAlert.isEmpty() && QDateTime::currentDateTime() < currentActiveAlertUntil) {
+            return currentActiveAlert;
+        }
+        return {};
+    }
+    static QDateTime calcNextEventOccurrence(const QString &id, const QDateTime &now) {
+        if (id == "shugo") {
+            QDateTime cand(now.date(), QTime(now.time().hour(), 0, 0));
+            if (cand <= now) cand = cand.addSecs(3600);
+            return cand;
+        }
+        if (id == "invasion") {
+            QDateTime cand(now.date(), QTime(now.time().hour(), 30, 0));
+            if (cand <= now) cand = cand.addSecs(3600);
+            return cand;
+        }
+        if (id == "rift") {
+            for (int h = 1; h <= 48; ++h) {
+                QDateTime cand = now.addSecs(h * 3600);
+                cand.setTime(QTime(cand.time().hour(), 0, 0));
+                if (cand > now && (cand.time().hour() % 3 == 2)) return cand;
+            }
+        }
+        if (id == "kaira") {
+            for (int h = 1; h <= 48; ++h) {
+                QDateTime cand = now.addSecs(h * 3600);
+                cand.setTime(QTime(cand.time().hour(), 0, 0));
+                if (cand > now && ((cand.time().hour() - 1 + 3) % 3 == 0)) return cand;
+            }
+        }
+        if (id == "siege") {
+            for (int d = 0; d < 14; ++d) {
+                QDateTime cand(now.date().addDays(d), QTime(21, 0, 0));
+                int dow = cand.date().dayOfWeek();
+                if (cand > now && (dow == 1 || dow == 4 || dow == 6)) return cand;
+            }
+        }
+        if (id == "siege_bosses") {
+            for (int d = 0; d < 14; ++d) {
+                QDateTime cand(now.date().addDays(d), QTime(21, 30, 0));
+                int dow = cand.date().dayOfWeek();
+                if (cand > now && (dow == 1 || dow == 4 || dow == 6)) return cand;
+            }
+        }
+        if (id == "nahma") {
+            for (int d = 0; d < 14; ++d) {
+                QDateTime cand(now.date().addDays(d), QTime(21, 0, 0));
+                int dow = cand.date().dayOfWeek();
+                if (cand > now && (dow == 5 || dow == 7)) return cand;
+            }
+        }
+        if (id == "daily_reset") {
+            return QDateTime(now.date().addDays(1), QTime(0, 0, 0));
+        }
+        if (id == "weekly_reset") {
+            for (int d = 1; d <= 7; ++d) {
+                QDateTime cand(now.date().addDays(d), QTime(0, 0, 0));
+                if (cand.date().dayOfWeek() == 3) return cand;
+            }
+        }
+        return now.addSecs(3600);
+    }
+    QVariantList eventSchedule() const {
+        struct EventDef {
+            QString id;
+            QString name;
+            QString icon;
+            QString category; // "minigame", "boss", "pvp", "reset"
+            QString subtext;
+            QString windowDuration;
+        };
+        static const QList<EventDef> defs = {
+            {"shugo", "Festival de Shugo", "🎪", "minigame", "Minijuegos para 4 a 9 jugadores (Jump Jump, Wraith Evasion, Odyle Flight...)", "10m"},
+            {"rift", "Spacetime Rift", "🌀", "pvp", "Apertura de portal dimensional a zona enemiga (portal abierto 10m)", "10m"},
+            {"invasion", "Invasión Dimensional", "⚔️", "pvp", "Asalto Aéreo de Beritra, Espada Maldita o Asalto de Espíritus", "13m"},
+            {"kaira", "Watcher Kaira", "👁️", "boss", "Spawn aleatorio en Lower Reshanta (América/Los Ángeles)", "30m"},
+            {"siege", "Artifact Siege", "🏰", "pvp", "Acceso al Abyss Corridor para la facción ganadora (lun, jue, sáb)", "30m"},
+            {"siege_bosses", "Siege Bosses", "👹", "boss", "Executors en Lower Reshanta y Executioners en Middle Reshanta", "30m"},
+            {"nahma", "Guardian Lord Nahma", "👑", "boss", "World Boss en Lower y Middle Reshanta (vie, dom)", "30m"},
+            {"daily_reset", "Reinicio Diario", "🌅", "reset", "Reinicio de misiones diarias, mazmorras y tiendas", "Instant"},
+            {"weekly_reset", "Reinicio Semanal", "🔄", "reset", "Reinicio de misiones semanales y clasificaciones (miércoles)", "Instant"}
+        };
+        const QDateTime now = QDateTime::currentDateTime();
+        QVariantList out;
+        for (const auto &def : defs) {
+            bool tracked = isEventTracked(def.id);
+            QDateTime nextTime = calcNextEventOccurrence(def.id, now);
+            qint64 secsLeft = now.secsTo(nextTime);
+            if (secsLeft < 0) secsLeft = 0;
+            int hours = secsLeft / 3600;
+            int mins = (secsLeft % 3600) / 60;
+            int secs = secsLeft % 60;
+            QString timeStr;
+            if (hours > 0) timeStr = QString("%1h %2m").arg(hours).arg(mins);
+            else if (mins > 0) timeStr = QString("%1m %2s").arg(mins).arg(secs);
+            else timeStr = QString("%1s").arg(secs);
+
+            out.append(QVariantMap{
+                {"id", def.id},
+                {"name", def.name},
+                {"icon", def.icon},
+                {"category", def.category},
+                {"subtext", def.subtext},
+                {"windowDuration", def.windowDuration},
+                {"startTime", nextTime.toString("HH:mm")},
+                {"startDate", nextTime.toString("ddd, d MMM")},
+                {"secsLeft", secsLeft},
+                {"timeLeftStr", timeStr},
+                {"tracked", tracked}
+            });
+        }
+        // Sort by secsLeft ascending (closest upcoming events first)
+        std::sort(out.begin(), out.end(), [](const QVariant &a, const QVariant &b) {
+            return a.toMap().value("secsLeft").toLongLong() < b.toMap().value("secsLeft").toLongLong();
+        });
+        return out;
+    }
+    void checkEventAlerts() {
+        if (!eventAlertsEnabledSetting) return;
+        const QDateTime now = QDateTime::currentDateTime();
+        const int leadSecs = eventAlertLeadMinutesSetting * 60;
+        const auto events = eventSchedule();
+        for (const auto &item : events) {
+            const auto map = item.toMap();
+            if (!map.value("tracked").toBool()) continue;
+            const QString eventId = map.value("id").toString();
+            const qint64 secsLeft = map.value("secsLeft").toLongLong();
+            // Trigger alert when within lead time window (e.g. <= 5 min and > 0)
+            if (secsLeft <= leadSecs && secsLeft > 0) {
+                QString alertKey = QString("%1_%2").arg(eventId, map.value("startTime").toString());
+                if (!triggeredEventAlerts.contains(alertKey)) {
+                    triggeredEventAlerts.insert(alertKey);
+                    currentActiveAlert = map;
+                    currentActiveAlert["leadMinutes"] = eventAlertLeadMinutesSetting;
+                    currentActiveAlertUntil = now.addSecs(180); // Keep banner visible for 3 minutes or until dismissed
+                    if (eventSoundEnabledSetting) {
+                        playAlertSound(map.value("category").toString() == "boss" ? "boss" : "event");
+                    }
+                    emit eventAlertsChanged();
+                    break;
+                }
+            }
+        }
+        // Clean up stale triggers (more than 2 hours in the past)
+        if (triggeredEventAlerts.size() > 50) triggeredEventAlerts.clear();
+    }
     QQuickWindow *window=nullptr;
     bool headless=false;
     QPoint dragOrigin;
@@ -689,6 +883,12 @@ public:
         connect(&publish,&QTimer::timeout,this,[this] {
             if(previewEnabled) refreshDisplay();
         });
+        eventTimer.setInterval(1000);
+        connect(&eventTimer,&QTimer::timeout,this,[this] {
+            checkEventAlerts();
+            emit eventAlertsChanged();
+        });
+        eventTimer.start();
         connect(&process,&QProcess::started,this,[this] {sendRefreshInterval();sendCharacterName();});
         connect(&process,&QProcess::readyReadStandardOutput,this,[this] {
             buffer+=process.readAllStandardOutput();int end;
@@ -737,7 +937,7 @@ public:
 signals:
     void interfacesChanged();
     void characterNameChanged();void captureChanged();void testModeChanged();void pollingChanged();void historyChanged();void detailChanged();void appearanceChanged();void characterChanged();void statusChanged();void durationChanged();void displayChanged();void encounterChanged();void bossChanged();void pvpChanged();void pvpSettingChanged();void radarChanged();
-    void radarSelectionChanged();void radarRangeChanged();void radarSubmenuChanged();
+    void radarSelectionChanged();void radarRangeChanged();void radarSubmenuChanged();void eventAlertsChanged();
 };
 static void global(void *data,wl_registry*,uint32_t,const char *interface,uint32_t) {if(!std::strcmp(interface,"zwlr_layer_shell_v1")) *static_cast<bool*>(data)=true;}
 static void removed(void*,wl_registry*,uint32_t) {}
