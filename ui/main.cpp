@@ -676,9 +676,44 @@ public:
         marketStatusMsg = "Consultando aion2.exchange...";
         emit marketChanged();
 
+        // 1. Fetch server list dynamically if not populated
+        if (marketServerList.isEmpty()) {
+            QUrl srvUrl("https://aion2.exchange/api/servers");
+            QNetworkRequest srvReq(srvUrl);
+            srvReq.setHeader(QNetworkRequest::UserAgentHeader, "FullAIon2Companion/1.0");
+            auto *srvReply = netMgr.get(srvReq);
+            connect(srvReply, &QNetworkReply::finished, this, [this, srvReply]() {
+                srvReply->deleteLater();
+                if (srvReply->error() == QNetworkReply::NoError) {
+                    auto doc = QJsonDocument::fromJson(srvReply->readAll());
+                    if (doc.isObject()) {
+                        auto arr = doc.object().value("servers").toArray();
+                        QVariantList list;
+                        for (const auto &sVal : arr) {
+                            auto s = sVal.toObject();
+                            if (s.value("has_data").toBool(true)) {
+                                list.append(QVariantMap{
+                                    {"id", s.value("server_id").toInt()},
+                                    {"name", QString("%1 (%2 - %3)").arg(s.value("name").toString(), s.value("region").toString(), s.value("faction").toString())},
+                                    {"rawName", s.value("name").toString()},
+                                    {"region", s.value("region").toString()},
+                                    {"faction", s.value("faction").toString()}
+                                });
+                            }
+                        }
+                        if (!list.isEmpty()) {
+                            marketServerList = list;
+                            emit marketChanged();
+                        }
+                    }
+                }
+            });
+        }
+
+        // 2. Fetch all items for current server
         QUrl url(QString("https://aion2.exchange/api/items?server=%1&limit=1000&sort=name&order=asc&window=24h").arg(selectedMarketServerId));
         QNetworkRequest req(url);
-        req.setHeader(QNetworkRequest::UserAgentHeader, "SlopMeter/1.0 (+https://github.com/sh4rkd/slopmeter)");
+        req.setHeader(QNetworkRequest::UserAgentHeader, "FullAIon2Companion/1.0");
 
         QNetworkReply *reply = netMgr.get(req);
         connect(reply, &QNetworkReply::finished, this, [this, reply]() {
@@ -696,17 +731,24 @@ public:
                 return;
             }
             auto items = doc.object().value("items").toArray();
-            int count = 0;
+            int countActive = 0, countLast = 0;
             for (const auto &it : items) {
                 auto obj = it.toObject();
                 int key = obj.value("item_key").toInt();
+                // Check active listing price first, fallback to last seen price
                 double p = obj.value("price").toDouble(0.0);
-                if (key > 0 && p > 0) {
+                if (p > 0) {
                     marketPrices[key] = p;
-                    count++;
+                    countActive++;
+                } else {
+                    double lastP = obj.value("last_price").toDouble(0.0);
+                    if (key > 0 && lastP > 0) {
+                        marketPrices[key] = lastP;
+                        countLast++;
+                    }
                 }
             }
-            marketStatusMsg = QString("Mercado actualizado · %1 objetos cotizados en vivo").arg(count);
+            marketStatusMsg = QString("Mercado actualizado · %1 cotizaciones activas (%2 referenciales recientes)").arg(countActive).arg(countLast);
             emit marketChanged();
         });
     }
