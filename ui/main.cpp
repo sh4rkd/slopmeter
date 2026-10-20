@@ -262,10 +262,14 @@ public:
         return QString("• MISMO NIVEL (%1%2m)").arg(dz>=0?"+":"", QString::number(d));
     }
     Q_INVOKABLE QString radarHorizArrow(const QString &hDir) const {
-        if(hDir=="Frente") return "↑ FRENTE";
-        if(hDir=="Atrás") return "↓ ATRÁS";
-        if(hDir=="Izq") return "← IZQ";
-        if(hDir=="Der") return "→ DER";
+        if(hDir=="Norte" || hDir=="Frente") return "↑ NORTE (FRENTE)";
+        if(hDir=="Sur" || hDir=="Atrás") return "↓ SUR (ATRÁS)";
+        if(hDir=="Este" || hDir=="Der") return "→ ESTE (DER)";
+        if(hDir=="Oeste" || hDir=="Izq") return "← OESTE (IZQ)";
+        if(hDir=="Noreste") return "↗ NORESTE";
+        if(hDir=="Sureste") return "↘ SURESTE";
+        if(hDir=="Noroeste") return "↖ NOROESTE";
+        if(hDir=="Suroeste") return "↙ SUROESTE";
         return "● CENTRO";
     }
     bool minimalistMode() const {return minimalistSetting;}

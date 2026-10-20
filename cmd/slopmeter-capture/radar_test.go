@@ -129,23 +129,23 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 	}
 
 	chest1 := byID[501]
-	if chest1.Category != radarCategoryChest || chest1.Name != "Hidden Cube" || chest1.HorizDir != "Frente" || chest1.VertDir != "Arriba" || chest1.ZDelta != 5.0 || chest1.RelX != 0.0 || chest1.RelY != 20.0 {
+	if chest1.Category != radarCategoryChest || chest1.Name != "Hidden Cube" || chest1.HorizDir != "Norte" || chest1.VertDir != "Arriba" || chest1.ZDelta != 5.0 || chest1.RelX != 0.0 || chest1.RelY != 20.0 {
 		t.Fatalf("unexpected chest1 radar item: %+v", chest1)
 	}
 	chest2 := byID[502]
-	if chest2.Category != radarCategoryChest || chest2.Name != "Hidden Cube" || chest2.HorizDir != "Der" || chest2.VertDir != "Abajo" || chest2.ZDelta != -4.0 || chest2.RelX != 15.0 || chest2.RelY != 0.0 {
+	if chest2.Category != radarCategoryChest || chest2.Name != "Hidden Cube" || chest2.HorizDir != "Este" || chest2.VertDir != "Abajo" || chest2.ZDelta != -4.0 || chest2.RelX != 15.0 || chest2.RelY != 0.0 {
 		t.Fatalf("unexpected chest2 radar item: %+v", chest2)
 	}
 	chest3 := byID[503]
-	if chest3.Category != radarCategoryChest || chest3.Name != "Asmodian Hidden Cube V04" || chest3.HorizDir != "Izq" || chest3.VertDir != "Nivel" || chest3.Distance != 10.0 || chest3.RelX != -10.0 || chest3.RelY != 0.0 {
+	if chest3.Category != radarCategoryChest || chest3.Name != "Asmodian Hidden Cube V04" || chest3.HorizDir != "Oeste" || chest3.VertDir != "Nivel" || chest3.Distance != 10.0 || chest3.RelX != -10.0 || chest3.RelY != 0.0 {
 		t.Fatalf("unexpected chest3 radar item: %+v", chest3)
 	}
 	chest4 := byID[504]
-	if chest4.Category != radarCategoryChest || chest4.Name != "Rare Hidden Chest" || chest4.HorizDir != "Der" || chest4.VertDir != "Arriba" || chest4.ZDelta != 3.0 || chest4.RelX != 12.0 || chest4.RelY != 0.0 {
+	if chest4.Category != radarCategoryChest || chest4.Name != "Rare Hidden Chest" || chest4.HorizDir != "Este" || chest4.VertDir != "Arriba" || chest4.ZDelta != 3.0 || chest4.RelX != 12.0 || chest4.RelY != 0.0 {
 		t.Fatalf("unexpected chest4 radar item: %+v", chest4)
 	}
 	chest5 := byID[505]
-	if chest5.Category != radarCategoryChest || chest5.Name != "Hidden Cube V04" || chest5.HorizDir != "Atrás" || chest5.VertDir != "Nivel" || chest5.Distance != 25.0 || chest5.RelX != 0.0 || chest5.RelY != -25.0 {
+	if chest5.Category != radarCategoryChest || chest5.Name != "Hidden Cube V04" || chest5.HorizDir != "Sur" || chest5.VertDir != "Nivel" || chest5.Distance != 25.0 || chest5.RelX != 0.0 || chest5.RelY != -25.0 {
 		t.Fatalf("unexpected chest5 radar item: %+v", chest5)
 	}
 
@@ -203,7 +203,7 @@ func TestRadarClientMovementAndByteInlineName(t *testing.T) {
 		t.Fatalf("expected 1 radar item, got %d", len(snap.Radar))
 	}
 	item := snap.Radar[0]
-	if item.Name != "Special Hidden Cube" || item.Category != radarCategoryChest || item.Distance != 20.0 || item.HorizDir != "Der" {
+	if item.Name != "Special Hidden Cube" || item.Category != radarCategoryChest || item.Distance != 20.0 || item.HorizDir != "Este" {
 		t.Fatalf("unexpected item parsed: %+v", item)
 	}
 }

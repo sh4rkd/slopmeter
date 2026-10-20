@@ -492,11 +492,15 @@ func (e *encounter) observeRadarSpawn(t time.Time, opcode wire.Opcode, payload [
 
 func computeDirection(selfPos game.Pos, hasSelfPos bool, hx, hy float32, hasHeading bool, targetPos game.Pos) (distMeters, relX, relY, zDeltaMeters, angleDeg float64, horizDir, vertDir string, hasDir bool) {
 	if !hasSelfPos {
-		return 0, 0, 0, 0, 0, "Frente", "Nivel", false
+		return 0, 0, 0, 0, 0, "Norte", "Nivel", false
 	}
-	dx := float64(targetPos.X - selfPos.X)
-	dy := float64(targetPos.Y - selfPos.Y)
-	dz := float64(targetPos.Z - selfPos.Z)
+	// In Unreal Engine / Aion 2 world coordinates:
+	// +X is World North
+	// +Y is World East
+	// +Z is World Up
+	dx := float64(targetPos.X - selfPos.X) // North/South offset in Unreal units
+	dy := float64(targetPos.Y - selfPos.Y) // East/West offset in Unreal units
+	dz := float64(targetPos.Z - selfPos.Z) // Height offset in Unreal units
 
 	// 100 Unreal units = 1 meter
 	dist2D := math.Hypot(dx, dy) / 100.0
@@ -515,26 +519,37 @@ func computeDirection(selfPos game.Pos, hasSelfPos bool, hx, hy float32, hasHead
 		return distMeters, 0, 0, zDeltaMeters, 0, "Aquí", vertDir, true
 	}
 
-	// Default reference vector is North/+X if player hasn't moved yet; otherwise relative to player's movement/cast heading.
-	fx, fy := 1.0, 0.0
-	if hasHeading {
-		fx, fy = float64(hx), float64(hy)
-	}
-	// Forward/Back component in meters (+relY = Front/Up on radar, -relY = Back/Down on radar)
-	relY = (fx*dx + fy*dy) / 100.0
-	// Right/Left component in meters (+relX = Right on radar, -relX = Left on radar)
-	relX = (fx*dy - fy*dx) / 100.0
+	// World Compass / Radar Projection:
+	// In Aion 2 radar / mini-map:
+	// - North (+X) is Top / Front of map (+relY)
+	// - East (+Y) is Right of map (+relX)
+	// - South (-X) is Bottom / Back of map (-relY)
+	// - West (-Y) is Left of map (-relX)
+	//
+	// Fixed world coordinate compass reference provides 100% deterministic,
+	// drift-free directions aligned with the in-game mini-map.
+	relY = dx / 100.0
+	relX = dy / 100.0
 	angleDeg = math.Atan2(relX, relY) * 180.0 / math.Pi
 
+	// Cardinal and 8-way directional mapping
 	switch {
-	case angleDeg >= -45 && angleDeg <= 45:
-		horizDir = "Frente"
-	case angleDeg > 45 && angleDeg < 135:
-		horizDir = "Der"
-	case angleDeg < -45 && angleDeg > -135:
-		horizDir = "Izq"
+	case angleDeg >= -22.5 && angleDeg <= 22.5:
+		horizDir = "Norte"
+	case angleDeg > 22.5 && angleDeg <= 67.5:
+		horizDir = "Noreste"
+	case angleDeg > 67.5 && angleDeg <= 112.5:
+		horizDir = "Este"
+	case angleDeg > 112.5 && angleDeg <= 157.5:
+		horizDir = "Sureste"
+	case angleDeg < -22.5 && angleDeg >= -67.5:
+		horizDir = "Noroeste"
+	case angleDeg < -67.5 && angleDeg >= -112.5:
+		horizDir = "Oeste"
+	case angleDeg < -112.5 && angleDeg >= -157.5:
+		horizDir = "Suroeste"
 	default:
-		horizDir = "Atrás"
+		horizDir = "Sur"
 	}
 	return distMeters, relX, relY, zDeltaMeters, angleDeg, horizDir, vertDir, true
 }

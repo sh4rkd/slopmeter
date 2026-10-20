@@ -435,10 +435,10 @@ Window {
                                 width: 1; height: parent.height - 6
                                 color: "#223147"
                             }
-                            Label { anchors.top: parent.top; anchors.topMargin: 2; anchors.horizontalCenter: parent.horizontalCenter; text: "F"; color: "#54cf82"; font.pixelSize: 8; font.bold: true }
-                            Label { anchors.bottom: parent.bottom; anchors.bottomMargin: 2; anchors.horizontalCenter: parent.horizontalCenter; text: "A"; color: "#7e8ea6"; font.pixelSize: 8 }
-                            Label { anchors.left: parent.left; anchors.leftMargin: 4; anchors.verticalCenter: parent.verticalCenter; text: "I"; color: "#7e8ea6"; font.pixelSize: 8 }
-                            Label { anchors.right: parent.right; anchors.rightMargin: 4; anchors.verticalCenter: parent.verticalCenter; text: "D"; color: "#7e8ea6"; font.pixelSize: 8 }
+                            Label { anchors.top: parent.top; anchors.topMargin: 2; anchors.horizontalCenter: parent.horizontalCenter; text: "N"; color: "#54cf82"; font.pixelSize: 8; font.bold: true }
+                            Label { anchors.bottom: parent.bottom; anchors.bottomMargin: 2; anchors.horizontalCenter: parent.horizontalCenter; text: "S"; color: "#7e8ea6"; font.pixelSize: 8 }
+                            Label { anchors.left: parent.left; anchors.leftMargin: 4; anchors.verticalCenter: parent.verticalCenter; text: "O"; color: "#7e8ea6"; font.pixelSize: 8 }
+                            Label { anchors.right: parent.right; anchors.rightMargin: 4; anchors.verticalCenter: parent.verticalCenter; text: "E"; color: "#7e8ea6"; font.pixelSize: 8 }
                             Rectangle {
                                 id: playerCenterMarker
                                 objectName: "radarPlayerCenter"
