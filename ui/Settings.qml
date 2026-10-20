@@ -24,6 +24,42 @@ Window {
             }
             Label {text: "Remembers the last detected name. Captured character identity overrides it on relog; name-based matches are rechecked after a zone change."; color: "#9eadc3"; Layout.fillWidth: true; font.pixelSize: 11; wrapMode: Text.WordWrap}
             Label {text: "Layout"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
+            Label {text: "Monitor / Pantalla de visualización"; color: "#c0cbdc"}
+            ComboBox {
+                id: screenSelector
+                objectName: "screenSelector"
+                Layout.fillWidth: true
+                model: {
+                    const list = [{ name: "__follow__", label: "Automático · Seguir pantalla de Aion 2" }]
+                    const screens = backend.availableScreens || []
+                    for (let i = 0; i < screens.length; ++i) {
+                        list.push(screens[i])
+                    }
+                    return list
+                }
+                textRole: "label"
+                valueRole: "name"
+                currentIndex: {
+                    if (backend.followGameDisplay) return 0
+                    const cur = backend.selectedScreenName
+                    const count = screenSelector.model.length
+                    for (let i = 1; i < count; ++i) {
+                        if (screenSelector.model[i].name === cur) return i
+                    }
+                    return 0
+                }
+                onActivated: {
+                    if (currentValue === "__follow__") {
+                        backend.followGameDisplay = true
+                    } else {
+                        backend.selectedScreenName = currentValue
+                    }
+                }
+            }
+            Label {
+                text: "Elige en qué monitor (pantalla 1, pantalla 2, etc.) se mostrará SlopMeter o mantén la detección automática para que siga la ventana de Aion 2."
+                color: "#9eadc3"; Layout.fillWidth: true; font.pixelSize: 11; wrapMode: Text.WordWrap
+            }
             CheckBox {objectName: "testModeToggle"; palette.windowText: "#e6edf6"; text: "Test mode"; checked: backend.testMode; onToggled: backend.testMode = checked}
             CheckBox {objectName: "minimalistModeToggle"; palette.windowText: "#e6edf6"; text: "Minimalist mode (text-only, no bars)"; checked: backend.minimalistMode; onToggled: backend.minimalistMode = checked}
             CheckBox {objectName: "minimalistCompactDamageToggle"; Layout.leftMargin: 20; visible: backend.minimalistMode; palette.windowText: "#e6edf6"; text: "Compact numbers — damage, CP/GS, HP (102.3K / 6.7M vs 102,301 / 6,741,514)"; checked: backend.minimalistCompactDamage; onToggled: backend.minimalistCompactDamage = checked}

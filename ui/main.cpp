@@ -160,6 +160,9 @@ class Bridge : public QObject {
     Q_PROPERTY(bool roundedDps READ roundedDps WRITE setRoundedDps NOTIFY appearanceChanged)
     Q_PROPERTY(bool captureActive READ captureActive NOTIFY captureChanged)
     Q_PROPERTY(QString displayLabel READ displayLabel NOTIFY displayChanged)
+    Q_PROPERTY(QVariantList availableScreens READ availableScreens NOTIFY displayChanged)
+    Q_PROPERTY(QString selectedScreenName READ selectedScreenName WRITE setSelectedScreenName NOTIFY displayChanged)
+    Q_PROPERTY(bool followGameDisplay READ followGameDisplay WRITE setFollowGameDisplay NOTIFY displayChanged)
     Q_PROPERTY(QString character READ character NOTIFY characterChanged)
     Q_PROPERTY(QString characterName READ characterName WRITE setCharacterName NOTIFY characterNameChanged)
     Q_PROPERTY(QString status READ status NOTIFY statusChanged)
@@ -858,6 +861,50 @@ public:
         if(ready) {interfaceMessage="Capturing on "+(activeInterface.isEmpty()?"Automatic":activeInterface)+". Relog if no character is detected.";emit interfacesChanged();}
     }}
     QString displayLabel() const {auto name=window&&window->screen()?window->screen()->name():QString();return "Display - "+(name.isEmpty()?"Default":name);}
+    QVariantList availableScreens() const {
+        QVariantList out;
+        for (auto *s : QGuiApplication::screens()) {
+            if (!s) continue;
+            auto geo = s->geometry();
+            QString label = QString("%1 (%2x%3)").arg(s->name()).arg(geo.width()).arg(geo.height());
+            if (s == QGuiApplication::primaryScreen()) label += " [Principal]";
+            out.append(QVariantMap{
+                {"name", s->name()},
+                {"label", label},
+                {"width", geo.width()},
+                {"height", geo.height()},
+                {"isPrimary", s == QGuiApplication::primaryScreen()}
+            });
+        }
+        return out;
+    }
+    QString selectedScreenName() const {
+        return window && window->screen() ? window->screen()->name() : "";
+    }
+    void setSelectedScreenName(const QString &name) {
+        if (name.isEmpty()) return;
+        autoDisplay = false;
+        QSettings().setValue("display/autoFollow", false);
+        QSettings().setValue("display/manualScreen", name);
+        for (auto *s : QGuiApplication::screens()) {
+            if (s && s->name() == name) {
+                selectScreen(s);
+                break;
+            }
+        }
+        emit displayChanged();
+    }
+    bool followGameDisplay() const {
+        return autoDisplay;
+    }
+    void setFollowGameDisplay(bool follow) {
+        autoDisplay = follow;
+        QSettings().setValue("display/autoFollow", follow);
+        if (follow && !gameScreen.isEmpty()) {
+            gameOutput(gameScreen, {});
+        }
+        emit displayChanged();
+    }
     void updateInputMask() {
         if(window&&panel) {
             // An empty QWindow mask resets the region. Use an off-surface region
@@ -1212,6 +1259,20 @@ int main(int argc,char **argv) {
     QObject::connect(window,&QQuickWindow::widthChanged,&bridge,[&bridge] {bridge.positionOverlay(bridge.position());});
     QObject::connect(window,&QQuickWindow::heightChanged,&bridge,[&bridge] {bridge.positionOverlay(bridge.position());});
     QObject::connect(window,&QWindow::screenChanged,&bridge,[&bridge](QScreen*) {emit bridge.displayChanged();});
+    
+    // Restore saved screen preference if user had selected a specific monitor
+    bool autoFollow = QSettings().value("display/autoFollow", true).toBool();
+    QString manualScreen = QSettings().value("display/manualScreen", "").toString();
+    bridge.autoDisplay = autoFollow;
+    if (!autoFollow && !manualScreen.isEmpty()) {
+        for (auto *s : QGuiApplication::screens()) {
+            if (s && s->name() == manualScreen) {
+                bridge.selectScreen(s);
+                break;
+            }
+        }
+    }
+
     bridge.resizeCanvas();emit bridge.displayChanged();
     auto savedPosition=QSettings().value("position0",QPoint(40,100)).toPoint();
     if(bridge.growUp() && QSettings().contains("positionBottom")) savedPosition.setY(qRound(QSettings().value("positionBottom").toDouble()-bridge.panel->height()));
