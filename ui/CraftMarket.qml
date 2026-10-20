@@ -340,13 +340,14 @@ Window {
                         }
                     }
 
-                    // Detalle Desplegable de Materiales
+                    // Detalle Desplegable de Materiales y Simulador de Volumen
                     ColumnLayout {
                         visible: recipeCard.expanded
-                        Layout.fillWidth: true; Layout.topMargin: 4; spacing: 2
+                        Layout.fillWidth: true; Layout.topMargin: 4; spacing: 6
                         Rectangle { Layout.fillWidth: true; height: 1; color: "#25344a" }
+                        
                         Label {
-                            text: "Materiales requeridos para fabricar:"
+                            text: "Materiales requeridos para fabricar (1 unidad):"
                             color: "#f1c778"; font.pixelSize: 9; font.bold: true
                         }
                         Repeater {
@@ -360,9 +361,159 @@ Window {
                                     Layout.fillWidth: true; elide: Text.ElideRight
                                 }
                                 Label {
-                                    text: Number(modelData.unitPrice || 0) > 0 ? (craftMarketWindow.formatKinah(modelData.unitPrice) + " K c/u = " + craftMarketWindow.formatKinah(modelData.totalCost) + " K") : "Precio no listado"
+                                    text: {
+                                        const p = Number(modelData.unitPrice || 0)
+                                        const lots = Number(modelData.listings || 0)
+                                        if (p <= 0) return "Precio no listado"
+                                        return craftMarketWindow.formatKinah(p) + " K c/u" + (lots > 0 ? (" (" + lots + " lotes)") : "")
+                                    }
                                     color: Number(modelData.unitPrice || 0) > 0 ? "#9ad9ec" : "#7e8ea6"
                                     font.pixelSize: 9
+                                }
+                            }
+                        }
+
+                        // Sección de Simulación de Volumen / Profundidad de Mercado
+                        Rectangle {
+                            Layout.fillWidth: true; radius: 4
+                            color: "#131a26"; border.width: 1; border.color: "#2a3d54"
+                            implicitHeight: simCol.implicitHeight + 14
+
+                            property int batchCount: 10
+                            property var simResult: recipeCard.expanded ? backend.simulateBatchCraft(recipeCard.modelData, batchCount) : null
+
+                            ColumnLayout {
+                                id: simCol
+                                anchors.fill: parent; anchors.margins: 8; spacing: 6
+
+                                RowLayout {
+                                    Layout.fillWidth: true; spacing: 6
+                                    Label {
+                                        text: "📊 Simulador de Volumen Acumulado (Profundidad de Mercado)"
+                                        color: "#e8effc"; font.pixelSize: 10; font.bold: true
+                                        Layout.fillWidth: true
+                                    }
+                                    Label {
+                                        text: "Lote: " + parent.parent.batchCount + " crafteos"
+                                        color: "#6cb2eb"; font.pixelSize: 10; font.bold: true
+                                    }
+                                }
+
+                                // Botones rápidos de cantidad de crafteo
+                                RowLayout {
+                                    spacing: 4
+                                    Label {
+                                        text: "Multiplicador:"
+                                        color: "#8fa1b8"; font.pixelSize: 9
+                                    }
+                                    Repeater {
+                                        model: [1, 5, 10, 25, 50, 100]
+                                        delegate: Rectangle {
+                                            required property int modelData
+                                            property bool isSelected: parent.parent.parent.batchCount === modelData
+                                            implicitWidth: 32; implicitHeight: 20; radius: 3
+                                            color: isSelected ? "#336699" : "#1e2c3d"
+                                            border.width: 1; border.color: isSelected ? "#6cb2eb" : "#32445b"
+                                            Label {
+                                                anchors.centerIn: parent
+                                                text: modelData + "x"
+                                                color: parent.isSelected ? "#ffffff" : "#9eb0c7"
+                                                font.pixelSize: 9; font.bold: parent.isSelected
+                                            }
+                                            TapHandler {
+                                                onTapped: parent.parent.parent.batchCount = modelData
+                                            }
+                                            HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                        }
+                                    }
+                                }
+
+                                // Resultados del cálculo acumulado
+                                RowLayout {
+                                    Layout.fillWidth: true; spacing: 8
+                                    // Costo acumulado
+                                    ColumnLayout {
+                                        spacing: 1
+                                        Label { text: "Costo Total Acumulado"; color: "#8fa1b8"; font.pixelSize: 8 }
+                                        Label {
+                                            text: parent.parent.parent.parent.simResult ? (craftMarketWindow.formatKinah(parent.parent.parent.parent.simResult.totalCost) + " K") : "-"
+                                            color: "#ff9999"; font.pixelSize: 10; font.bold: true
+                                        }
+                                        Label {
+                                            text: parent.parent.parent.parent.simResult ? ("Prom: " + craftMarketWindow.formatKinah(parent.parent.parent.parent.simResult.avgCostPerCraft) + " K/u") : ""
+                                            color: "#b07b82"; font.pixelSize: 8
+                                        }
+                                    }
+                                    // Ingreso neto acumulado (después del 10% broker tax)
+                                    ColumnLayout {
+                                        spacing: 1
+                                        Label { text: "Venta Neta (-10% broker)"; color: "#8fa1b8"; font.pixelSize: 8 }
+                                        Label {
+                                            text: parent.parent.parent.parent.simResult ? (craftMarketWindow.formatKinah(parent.parent.parent.parent.simResult.totalNetRevenue) + " K") : "-"
+                                            color: "#9ad9ec"; font.pixelSize: 10; font.bold: true
+                                        }
+                                        Label {
+                                            text: parent.parent.parent.parent.simResult ? ("Prom: " + craftMarketWindow.formatKinah(parent.parent.parent.parent.simResult.avgNetRevenuePerCraft) + " K/u") : ""
+                                            color: "#7292a8"; font.pixelSize: 8
+                                        }
+                                    }
+                                    // Beneficio neto total
+                                    ColumnLayout {
+                                        Layout.fillWidth: true; spacing: 1
+                                        Label { text: "Beneficio Neto Total"; color: "#8fa1b8"; font.pixelSize: 8 }
+                                        Label {
+                                            text: {
+                                                const res = parent.parent.parent.parent.simResult
+                                                if (!res) return "-"
+                                                const p = Number(res.totalProfit || 0)
+                                                const roi = Number(res.totalRoi || 0).toFixed(0)
+                                                return (p > 0 ? "+" : "") + craftMarketWindow.formatKinah(p) + " K (" + (p > 0 ? "+" : "") + roi + "%)"
+                                            }
+                                            color: {
+                                                const res = parent.parent.parent.parent.simResult
+                                                if (!res) return "#c0cbdc"
+                                                return Number(res.totalProfit || 0) > 0 ? "#54cf82" : "#ff8080"
+                                            }
+                                            font.pixelSize: 10; font.bold: true
+                                        }
+                                    }
+                                }
+
+                                // Indicador de Capacidad Máxima de Crafteo con Rentabilidad
+                                Rectangle {
+                                    Layout.fillWidth: true; implicitHeight: 22; radius: 3
+                                    color: {
+                                        const res = parent.parent.simResult
+                                        if (!res) return "#1e2836"
+                                        return Number(res.maxProfitableBatch || 0) > 0 ? "#183624" : "#3b1e22"
+                                    }
+                                    border.width: 1
+                                    border.color: {
+                                        const res = parent.parent.simResult
+                                        if (!res) return "#2c3b4d"
+                                        return Number(res.maxProfitableBatch || 0) > 0 ? "#2d6b45" : "#6e2930"
+                                    }
+
+                                    RowLayout {
+                                        anchors.fill: parent; anchors.leftMargin: 6; anchors.rightMargin: 6; spacing: 4
+                                        Label {
+                                            text: {
+                                                const res = parent.parent.parent.simResult
+                                                if (!res) return "Calculando rentabilidad..."
+                                                const maxB = Number(res.maxProfitableBatch || 0)
+                                                if (maxB <= 0) return "⚠️ No rentable desde la 1ª unidad con los precios actuales."
+                                                if (maxB >= 100) return "✨ Excelente liquidez: Rentable por más de 100 unidades continuas."
+                                                return "⚡ Límite Seguro: Rentable hasta " + maxB + " unidades seguidas (después suben los materiales y genera pérdidas)."
+                                            }
+                                            color: {
+                                                const res = parent.parent.parent.simResult
+                                                if (!res) return "#8fa1b8"
+                                                return Number(res.maxProfitableBatch || 0) > 0 ? "#6ee69e" : "#ff9e9e"
+                                            }
+                                            font.pixelSize: 9; font.bold: true
+                                            Layout.fillWidth: true; elide: Text.ElideRight
+                                        }
+                                    }
                                 }
                             }
                         }

@@ -617,6 +617,7 @@ public:
     bool isMarketLoading=false;
     QString marketStatusMsg="Listo para consultar precios";
     QMap<int, double> marketPrices; // item_key -> unit price in Kinah
+    QMap<int, int> marketListings; // item_key -> active listings count
     QVariantList cachedRecipes;
     bool recipesLoaded=false;
 
@@ -738,6 +739,10 @@ public:
             for (const auto &it : items) {
                 auto obj = it.toObject();
                 int key = obj.value("item_key").toInt();
+                int listingsCount = obj.value("listings").toInt(0);
+                if (key > 0) {
+                    marketListings[key] = listingsCount;
+                }
                 // Check active listing price first, fallback to last seen price
                 double p = obj.value("price").toDouble(0.0);
                 if (p > 0) {
@@ -765,6 +770,7 @@ public:
             int resultId = res.value("id").toInt();
             int resultCount = qMax(1, res.value("count").toInt());
             double sellPrice = marketPrices.value(resultId, 0.0);
+            int resultListings = marketListings.value(resultId, 0);
 
             // Compute material costs
             auto mats = r.value("materials").toList();
@@ -776,11 +782,13 @@ public:
                 int mId = m.value("id").toInt();
                 int mCount = qMax(1, m.value("count").toInt());
                 double unitPrice = marketPrices.value(mId, 0.0);
+                int matListings = marketListings.value(mId, 0);
                 if (unitPrice <= 0) missingAnyPrice = true;
                 double matCost = unitPrice * mCount;
                 totalCost += matCost;
                 m["unitPrice"] = unitPrice;
                 m["totalCost"] = matCost;
+                m["listings"] = matListings;
                 enrichedMats.append(m);
             }
 
@@ -791,16 +799,102 @@ public:
             double profit = netRevenue - totalCost;
             double roiPct = totalCost > 0 ? (profit / totalCost * 100.0) : 0.0;
 
+            res["listings"] = resultListings;
+            r["result"] = res;
             r["materials"] = enrichedMats;
             r["sellPrice"] = std::round(sellPrice);
             r["totalCost"] = std::round(totalCost);
             r["profit"] = std::round(profit);
             r["roiPct"] = std::round(roiPct * 10.0) / 10.0;
             r["hasPrices"] = (sellPrice > 0 && !missingAnyPrice);
+            r["resultListings"] = resultListings;
 
             out.append(r);
         }
         return out;
+    }
+
+    Q_INVOKABLE QVariantMap simulateBatchCraft(const QVariantMap &recipe, int batchCount) {
+        batchCount = qBound(1, batchCount, 500);
+        auto res = recipe.value("result").toMap();
+        int resultCountPerCraft = qMax(1, res.value("count").toInt());
+        double baseSellPrice = recipe.value("sellPrice").toDouble();
+        int prodListings = recipe.value("resultListings").toInt();
+        if (prodListings <= 0) prodListings = res.value("listings").toInt();
+        if (prodListings <= 0) prodListings = 5;
+
+        auto mats = recipe.value("materials").toList();
+
+        double cumulativeCost = 0.0;
+        double cumulativeGrossRevenue = 0.0;
+        int maxProfitableBatch = 0;
+        bool brokeEven = false;
+        double taxMultiplier = 1.0 - (marketTaxRateSetting / 100.0);
+        if (taxMultiplier < 0) taxMultiplier = 0.0;
+
+        // Simulate unit by unit up to batchCount (and find break-even limit up to 100)
+        int searchLimit = qMax(batchCount, 100);
+
+        for (int i = 1; i <= searchLimit; ++i) {
+            // Cost of crafting unit i
+            double unitCraftCost = 0.0;
+            for (const auto &mVal : mats) {
+                auto m = mVal.toMap();
+                double baseMatPrice = m.value("unitPrice").toDouble();
+                int countPerCraft = qMax(1, m.value("count").toInt());
+                int matListings = m.value("listings").toInt();
+                if (matListings <= 0) matListings = 5;
+
+                // Model order-book depth escalation:
+                // Surge factor increases as more lots are consumed.
+                double surgeFactor = 1.0 + (static_cast<double>(i - 1) / static_cast<double>(matListings)) * 0.15;
+                if (surgeFactor > 5.0) surgeFactor = 5.0; // Cap surge at 500%
+                unitCraftCost += (baseMatPrice * surgeFactor) * countPerCraft;
+            }
+
+            // Sale revenue of unit i
+            // As more finished products flood the broker, price experiences mild saturation decay
+            double decayFactor = 1.0 - (static_cast<double>(i - 1) / static_cast<double>(prodListings)) * 0.08;
+            if (decayFactor < 0.4) decayFactor = 0.4; // Cap decay at floor 40% of base price
+            double unitGrossRevenue = (baseSellPrice * decayFactor) * resultCountPerCraft;
+            double unitNetRevenue = unitGrossRevenue * taxMultiplier;
+
+            // Check if this single marginal craft is still profitable
+            double marginalProfit = unitNetRevenue - unitCraftCost;
+            if (marginalProfit > 0 && !brokeEven) {
+                maxProfitableBatch = i;
+            } else if (marginalProfit <= 0) {
+                brokeEven = true;
+            }
+
+            if (i <= batchCount) {
+                cumulativeCost += unitCraftCost;
+                cumulativeGrossRevenue += unitGrossRevenue;
+            }
+        }
+
+        double totalNetRevenue = cumulativeGrossRevenue * taxMultiplier;
+        double totalProfit = totalNetRevenue - cumulativeCost;
+        double totalRoi = cumulativeCost > 0 ? (totalProfit / cumulativeCost * 100.0) : 0.0;
+
+        // Average unit values for the chosen batch
+        double avgCostPerCraft = cumulativeCost / batchCount;
+        double avgNetRevenuePerCraft = totalNetRevenue / batchCount;
+        double avgProfitPerCraft = totalProfit / batchCount;
+
+        return QVariantMap{
+            {"batchCount", batchCount},
+            {"totalCost", std::round(cumulativeCost)},
+            {"totalGrossRevenue", std::round(cumulativeGrossRevenue)},
+            {"totalNetRevenue", std::round(totalNetRevenue)},
+            {"totalProfit", std::round(totalProfit)},
+            {"totalRoi", std::round(totalRoi * 10.0) / 10.0},
+            {"avgCostPerCraft", std::round(avgCostPerCraft)},
+            {"avgNetRevenuePerCraft", std::round(avgNetRevenuePerCraft)},
+            {"avgProfitPerCraft", std::round(avgProfitPerCraft)},
+            {"maxProfitableBatch", maxProfitableBatch},
+            {"isBatchProfitable", totalProfit > 0}
+        };
     }
     QQuickWindow *window=nullptr;
     bool headless=false;
