@@ -40,6 +40,9 @@ static bool g_noLayerShell=false;
 #include <QDateTime>
 #include <QStandardPaths>
 #include <QUrl>
+#include <QNetworkAccessManager>
+#include <QNetworkRequest>
+#include <QNetworkReply>
 #include <QVBoxLayout>
 #include <QPushButton>
 #include <QLabel>
@@ -125,6 +128,12 @@ class Bridge : public QObject {
     Q_PROPERTY(int eventAlertLeadMinutes READ eventAlertLeadMinutes WRITE setEventAlertLeadMinutes NOTIFY eventAlertsChanged)
     Q_PROPERTY(QVariantList eventSchedule READ eventSchedule NOTIFY eventAlertsChanged)
     Q_PROPERTY(QVariantMap activeEventAlert READ activeEventAlert NOTIFY eventAlertsChanged)
+    Q_PROPERTY(QVariantList marketServers READ marketServers NOTIFY marketChanged)
+    Q_PROPERTY(int selectedMarketServer READ selectedMarketServer WRITE setSelectedMarketServer NOTIFY marketChanged)
+    Q_PROPERTY(QString selectedMarketServerName READ selectedMarketServerName NOTIFY marketChanged)
+    Q_PROPERTY(bool marketLoading READ marketLoading NOTIFY marketChanged)
+    Q_PROPERTY(QString marketStatus READ marketStatus NOTIFY marketChanged)
+    Q_PROPERTY(QVariantList craftRecipes READ craftRecipes NOTIFY marketChanged)
     Q_PROPERTY(QVariantMap detailPlayer READ detailPlayer NOTIFY detailChanged)
     Q_PROPERTY(QVariantMap detailFight READ detailFight NOTIFY detailChanged)
     Q_PROPERTY(bool testMode READ testMode WRITE setTestMode NOTIFY testModeChanged)
@@ -596,6 +605,145 @@ public:
         // Clean up stale triggers (more than 2 hours in the past)
         if (triggeredEventAlerts.size() > 50) triggeredEventAlerts.clear();
     }
+    QNetworkAccessManager netMgr;
+    QVariantList marketServerList;
+    int selectedMarketServerId=QSettings().value("market/serverId", 11101).toInt();
+    QString selectedMarketServerNameStr="Siel (NAE)";
+    bool isMarketLoading=false;
+    QString marketStatusMsg="Listo para consultar precios";
+    QMap<int, double> marketPrices; // item_key -> unit price in Kinah
+    QVariantList cachedRecipes;
+    bool recipesLoaded=false;
+
+    QVariantList marketServers() const {
+        if (!marketServerList.isEmpty()) return marketServerList;
+        return {
+            QVariantMap{{"id", 11101}, {"name", "Siel"}, {"region", "NAE"}, {"faction", "Elyos"}},
+            QVariantMap{{"id", 12101}, {"name", "Israphel"}, {"region", "NAE"}, {"faction", "Asmodian"}},
+            QVariantMap{{"id", 11102}, {"name", "Nezekan"}, {"region", "NAE"}, {"faction", "Elyos"}},
+            QVariantMap{{"id", 12102}, {"name", "Zikel"}, {"region", "NAE"}, {"faction", "Asmodian"}},
+            QVariantMap{{"id", 11201}, {"name", "Kaisinel"}, {"region", "NAW"}, {"faction", "Elyos"}},
+            QVariantMap{{"id", 12201}, {"name", "Lumiel"}, {"region", "NAW"}, {"faction", "Asmodian"}},
+            QVariantMap{{"id", 11301}, {"name", "Telemachus"}, {"region", "EU"}, {"faction", "Elyos"}},
+            QVariantMap{{"id", 12301}, {"name", "Perento"}, {"region", "EU"}, {"faction", "Asmodian"}}
+        };
+    }
+    int selectedMarketServer() const {return selectedMarketServerId;}
+    QString selectedMarketServerName() const {return selectedMarketServerNameStr;}
+    void setSelectedMarketServer(int id) {
+        if (selectedMarketServerId == id) return;
+        selectedMarketServerId = id;
+        QSettings().setValue("market/serverId", id);
+        for (const auto &s : marketServers()) {
+            auto m = s.toMap();
+            if (m.value("id").toInt() == id) {
+                selectedMarketServerNameStr = QString("%1 (%2)").arg(m.value("name").toString(), m.value("region").toString());
+                break;
+            }
+        }
+        emit marketChanged();
+        fetchMarketPrices();
+    }
+    bool marketLoading() const {return isMarketLoading;}
+    QString marketStatus() const {return marketStatusMsg;}
+
+    void loadRecipesDatabase() {
+        if (recipesLoaded) return;
+        QFile file(":/data/recipes.json");
+        if (file.open(QIODevice::ReadOnly)) {
+            auto doc = QJsonDocument::fromJson(file.readAll());
+            if (doc.isArray()) {
+                cachedRecipes = doc.array().toVariantList();
+                recipesLoaded = true;
+            }
+        }
+    }
+
+    Q_INVOKABLE void fetchMarketPrices() {
+        if (isMarketLoading) return;
+        isMarketLoading = true;
+        marketStatusMsg = "Consultando aion2.exchange...";
+        emit marketChanged();
+
+        QUrl url(QString("https://aion2.exchange/api/items?server=%1&limit=1000&sort=name&order=asc&window=24h").arg(selectedMarketServerId));
+        QNetworkRequest req(url);
+        req.setHeader(QNetworkRequest::UserAgentHeader, "SlopMeter/1.0 (+https://github.com/sh4rkd/slopmeter)");
+
+        QNetworkReply *reply = netMgr.get(req);
+        connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+            isMarketLoading = false;
+            reply->deleteLater();
+            if (reply->error() != QNetworkReply::NoError) {
+                marketStatusMsg = "Error al conectar con aion2.exchange: " + reply->errorString();
+                emit marketChanged();
+                return;
+            }
+            auto doc = QJsonDocument::fromJson(reply->readAll());
+            if (!doc.isObject()) {
+                marketStatusMsg = "Respuesta no válida del mercado";
+                emit marketChanged();
+                return;
+            }
+            auto items = doc.object().value("items").toArray();
+            int count = 0;
+            for (const auto &it : items) {
+                auto obj = it.toObject();
+                int key = obj.value("item_key").toInt();
+                double p = obj.value("price").toDouble(0.0);
+                if (key > 0 && p > 0) {
+                    marketPrices[key] = p;
+                    count++;
+                }
+            }
+            marketStatusMsg = QString("Mercado actualizado · %1 objetos cotizados en vivo").arg(count);
+            emit marketChanged();
+        });
+    }
+
+    QVariantList craftRecipes() {
+        loadRecipesDatabase();
+        QVariantList out;
+        for (const auto &val : cachedRecipes) {
+            auto r = val.toMap();
+            auto res = r.value("result").toMap();
+            int resultId = res.value("id").toInt();
+            int resultCount = qMax(1, res.value("count").toInt());
+            double sellPrice = marketPrices.value(resultId, 0.0);
+
+            // Compute material costs
+            auto mats = r.value("materials").toList();
+            double totalCost = 0.0;
+            bool missingAnyPrice = false;
+            QVariantList enrichedMats;
+            for (const auto &mVal : mats) {
+                auto m = mVal.toMap();
+                int mId = m.value("id").toInt();
+                int mCount = qMax(1, m.value("count").toInt());
+                double unitPrice = marketPrices.value(mId, 0.0);
+                if (unitPrice <= 0) missingAnyPrice = true;
+                double matCost = unitPrice * mCount;
+                totalCost += matCost;
+                m["unitPrice"] = unitPrice;
+                m["totalCost"] = matCost;
+                enrichedMats.append(m);
+            }
+
+            // Broker tax is approx 7%
+            double netRevenue = sellPrice * resultCount * 0.93;
+            double profit = netRevenue - totalCost;
+            double roiPct = totalCost > 0 ? (profit / totalCost * 100.0) : 0.0;
+
+            r["materials"] = enrichedMats;
+            r["sellPrice"] = sellPrice;
+            r["totalCost"] = totalCost;
+            r["profit"] = profit;
+            r["roiPct"] = roiPct;
+            r["hasPrices"] = (sellPrice > 0 && !missingAnyPrice);
+
+            out.append(r);
+        }
+        return out;
+    }
     QQuickWindow *window=nullptr;
     bool headless=false;
     QPoint dragOrigin;
@@ -937,7 +1085,7 @@ public:
 signals:
     void interfacesChanged();
     void characterNameChanged();void captureChanged();void testModeChanged();void pollingChanged();void historyChanged();void detailChanged();void appearanceChanged();void characterChanged();void statusChanged();void durationChanged();void displayChanged();void encounterChanged();void bossChanged();void pvpChanged();void pvpSettingChanged();void radarChanged();
-    void radarSelectionChanged();void radarRangeChanged();void radarSubmenuChanged();void eventAlertsChanged();
+    void radarSelectionChanged();void radarRangeChanged();void radarSubmenuChanged();void eventAlertsChanged();void marketChanged();
 };
 static void global(void *data,wl_registry*,uint32_t,const char *interface,uint32_t) {if(!std::strcmp(interface,"zwlr_layer_shell_v1")) *static_cast<bool*>(data)=true;}
 static void removed(void*,wl_registry*,uint32_t) {}

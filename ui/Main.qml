@@ -11,6 +11,12 @@ Window {
         if (settingsLoader.item) {settingsLoader.item.transientParent = null;settingsLoader.item.screen = meter.screen;settingsLoader.item.show();settingsLoader.item.raise();settingsLoader.item.requestActivate()}
     }
     Loader {id: settingsLoader; active: false; source: "Settings.qml"}
+    function openCraftMarket() {
+        craftMarketLoader.active = true
+        if (craftMarketLoader.item) {craftMarketLoader.item.transientParent = null;craftMarketLoader.item.screen = meter.screen;craftMarketLoader.item.show();craftMarketLoader.item.raise();craftMarketLoader.item.requestActivate()}
+        backend.fetchMarketPrices()
+    }
+    Loader {id: craftMarketLoader; active: false; source: "CraftMarket.qml"}
     function openDetails(actorId) {
         backend.selectPlayer(actorId)
         detailLoader.active = true
@@ -158,6 +164,14 @@ Window {
                         palette.buttonText: backend.eventAlertsEnabled ? "#f1c778" : "#7e8ea6"
                         onClicked: eventScheduleDrawer.visible = !eventScheduleDrawer.visible
                         ToolTip.visible: hovered; ToolTip.text: "Horarios y Alertas de Eventos Aion 2 (Shugo, Rift, Invasión, Bosses)"
+                    }
+                    Button {
+                        objectName: "craftMarketButton"
+                        text: "⚒"
+                        implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32
+                        palette.buttonText: "#54cf82"
+                        onClicked: meter.openCraftMarket()
+                        ToolTip.visible: hovered; ToolTip.text: "Economía y Calculadora de Crafteo Aion 2 (Precios y Rentabilidad en vivo)"
                     }
                     Button { objectName: "settingsButton"; text: "⚙"; implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32; onClicked: meter.openSettings(); ToolTip.visible: hovered; ToolTip.text: "Meter settings" }
                     Button { objectName: "resetDamageButton"; text: "↻"; implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32; onClicked: backend.resetDamage(); ToolTip.visible: hovered; ToolTip.text: "Reset current fight damage"; Accessible.name: "Reset current fight damage" }

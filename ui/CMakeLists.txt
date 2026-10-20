@@ -12,7 +12,8 @@ qt_add_resources(slopmeter application_icon PREFIX "/app" FILES "../packaging/sl
 file(GLOB CLASS_ICONS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS "icons/*.svg")
 file(GLOB GAME_ICONS RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS "class-icons/*.png" "skill-icons/*.webp")
 file(GLOB SOUND_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS "sounds/*.wav")
-qt_add_resources(slopmeter qml PREFIX "/" FILES Main.qml FightDetails.qml SkillTimeline.qml Settings.qml preview.json game-screen.js ${CLASS_ICONS} ${GAME_ICONS} ${SOUND_FILES})
+file(GLOB DATA_FILES RELATIVE "${CMAKE_CURRENT_SOURCE_DIR}" CONFIGURE_DEPENDS "data/*.json")
+qt_add_resources(slopmeter qml PREFIX "/" FILES Main.qml FightDetails.qml SkillTimeline.qml Settings.qml CraftMarket.qml preview.json game-screen.js ${CLASS_ICONS} ${GAME_ICONS} ${SOUND_FILES} ${DATA_FILES})
 target_link_libraries(slopmeter PRIVATE Qt6::Quick Qt6::QuickControls2 Qt6::Widgets Qt6::DBus Qt6::Network LayerShellQt::Interface PkgConfig::WAYLAND)
 
 file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/../VERSION" SLOPMETER_DEFAULT_VERSION LIMIT_COUNT 1)
