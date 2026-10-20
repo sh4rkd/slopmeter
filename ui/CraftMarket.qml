@@ -14,8 +14,9 @@ Window {
     property string searchText: ""
     property string excludeText: ""
     property bool onlyProfitable: false
-    property string sortBy: "profit" // "profit", "roi", "sellPrice", "cost", "name"
+    property string sortBy: "profit" // "profit", "roi", "sellPrice", "cost", "name", "budgetProfit"
     property bool sortAscending: false
+    property double availableBudget: 0.0
 
     function formatKinah(value) {
         if (value === undefined || value === null || isNaN(value)) return "0"
@@ -111,16 +112,51 @@ Window {
             }
             TextField {
                 id: excludeInput
-                placeholderText: "Excluir recurso/material (ej. Odyle)..."
+                placeholderText: "Excluir material..."
                 implicitHeight: 28
-                Layout.preferredWidth: 200
+                Layout.preferredWidth: 140
                 palette.text: "#ff9e9e"
                 palette.base: "#241a1e"
-                ToolTip.visible: hovered; ToolTip.text: "Excluye cualquier receta que requiera este material o recurso"
+                ToolTip.visible: hovered; ToolTip.text: "Excluye recetas que requieran este material"
                 onTextChanged: craftMarketWindow.excludeText = text.toLowerCase().trim()
             }
+            // Campo de Kinah Disponible / Presupuesto para Inversión
+            Rectangle {
+                implicitWidth: 170; implicitHeight: 28; radius: 3
+                color: "#1c2a38"; border.width: 1; border.color: craftMarketWindow.availableBudget > 0 ? "#54cf82" : "#354a63"
+                RowLayout {
+                    anchors.fill: parent; anchors.margins: 4; spacing: 4
+                    Label {
+                        text: "💰 Kinah Disp:"
+                        color: "#f1c778"; font.pixelSize: 9; font.bold: true
+                    }
+                    TextField {
+                        id: budgetField
+                        Layout.fillWidth: true; Layout.fillHeight: true
+                        placeholderText: "Ej. 5M, 500k, 1000000"
+                        palette.text: "#54cf82"; palette.base: "transparent"
+                        font.pixelSize: 10; font.bold: true
+                        background: null
+                        onTextChanged: {
+                            let raw = text.trim().toLowerCase().replace(/,/g, '')
+                            if (raw === "") {
+                                craftMarketWindow.availableBudget = 0.0
+                                return
+                            }
+                            let mult = 1.0
+                            if (raw.endsWith('k')) { mult = 1000.0; raw = raw.slice(0, -1); }
+                            else if (raw.endsWith('m')) { mult = 1000000.0; raw = raw.slice(0, -1); }
+                            else if (raw.endsWith('b')) { mult = 1000000000.0; raw = raw.slice(0, -1); }
+                            let parsed = parseFloat(raw)
+                            craftMarketWindow.availableBudget = (!isNaN(parsed) && parsed > 0) ? (parsed * mult) : 0.0
+                        }
+                    }
+                }
+                ToolTip.visible: budgetHover.hovered; ToolTip.text: "Ingresa tu Kinah disponible para comprar ingredientes (ej. '10M' o '500k'). Slopmeter calculará cuánto puedes craftear y el beneficio máximo con tu dinero."
+                HoverHandler { id: budgetHover }
+            }
             CheckBox {
-                text: "Solo Rentables (>0)"
+                text: "Solo Rentables"
                 checked: craftMarketWindow.onlyProfitable
                 palette.windowText: "#54cf82"
                 onToggled: craftMarketWindow.onlyProfitable = checked
@@ -136,9 +172,10 @@ Window {
             }
             ComboBox {
                 id: sortFieldCombo
-                implicitWidth: 170; implicitHeight: 26
+                implicitWidth: 190; implicitHeight: 26
                 model: [
                     { label: "Beneficio Neto (Kinah)", value: "profit" },
+                    { label: "Beneficio con tu Presupuesto", value: "budgetProfit" },
                     { label: "Retorno (% ROI)", value: "roi" },
                     { label: "Precio de Venta", value: "sellPrice" },
                     { label: "Costo de Materiales", value: "cost" },
@@ -248,6 +285,17 @@ Window {
                     }
 
                     if (craftMarketWindow.onlyProfitable && Number(r.profit || 0) <= 0) continue
+
+                    // Si hay presupuesto definido, podemos calcular los datos óptimos de presupuesto
+                    if (craftMarketWindow.availableBudget > 0) {
+                        const bSim = backend.simulateBatchCraft(r, 1, craftMarketWindow.availableBudget)
+                        r.budgetAffordable = bSim.budgetAffordableCount
+                        r.budgetProfit = bSim.budgetProfit
+                        r.budgetTotalCost = bSim.budgetTotalCost
+                        r.budgetRoi = bSim.budgetRoi
+                        r.optimalWithBudget = bSim.optimalWithBudget
+                    }
+
                     res.push(r)
                 }
 
@@ -258,6 +306,8 @@ Window {
                     let va = 0, vb = 0
                     if (sortBy === "profit") {
                         va = Number(a.profit || 0); vb = Number(b.profit || 0)
+                    } else if (sortBy === "budgetProfit") {
+                        va = Number(a.budgetProfit || 0); vb = Number(b.budgetProfit || 0)
                     } else if (sortBy === "roi") {
                         va = Number(a.roiPct || 0); vb = Number(b.roiPct || 0)
                     } else if (sortBy === "sellPrice") {
@@ -316,22 +366,37 @@ Window {
                             }
                         }
                         // Badge de Beneficio
-                        Rectangle {
-                            implicitWidth: profitLbl.implicitWidth + 10; implicitHeight: 24; radius: 3
-                            color: Number(modelData.profit || 0) > 0 ? "#1c3d2c" : Number(modelData.profit || 0) < 0 ? "#422126" : "#243142"
-                            border.width: 1
-                            border.color: Number(modelData.profit || 0) > 0 ? "#54cf82" : Number(modelData.profit || 0) < 0 ? "#ff8080" : "#455973"
-                            Label {
-                                id: profitLbl; anchors.centerIn: parent
-                                text: {
-                                    const p = Number(modelData.profit || 0)
-                                    const roi = Number(modelData.roiPct || 0).toFixed(0)
-                                    if (p > 0) return "+" + craftMarketWindow.formatKinah(p) + " K (+" + roi + "%)"
-                                    if (p < 0) return craftMarketWindow.formatKinah(p) + " K (" + roi + "%)"
-                                    return "0 K"
+                        ColumnLayout {
+                            spacing: 1
+                            Rectangle {
+                                implicitWidth: profitLbl.implicitWidth + 10; implicitHeight: 22; radius: 3
+                                color: Number(modelData.profit || 0) > 0 ? "#1c3d2c" : Number(modelData.profit || 0) < 0 ? "#422126" : "#243142"
+                                border.width: 1
+                                border.color: Number(modelData.profit || 0) > 0 ? "#54cf82" : Number(modelData.profit || 0) < 0 ? "#ff8080" : "#455973"
+                                Label {
+                                    id: profitLbl; anchors.centerIn: parent
+                                    text: {
+                                        const p = Number(modelData.profit || 0)
+                                        const roi = Number(modelData.roiPct || 0).toFixed(0)
+                                        if (p > 0) return "+" + craftMarketWindow.formatKinah(p) + " K (+" + roi + "%)"
+                                        if (p < 0) return craftMarketWindow.formatKinah(p) + " K (" + roi + "%)"
+                                        return "0 K"
+                                    }
+                                    color: Number(modelData.profit || 0) > 0 ? "#54cf82" : Number(modelData.profit || 0) < 0 ? "#ff9e9e" : "#c0cbdc"
+                                    font.pixelSize: 10; font.bold: true
                                 }
-                                color: Number(modelData.profit || 0) > 0 ? "#54cf82" : Number(modelData.profit || 0) < 0 ? "#ff9e9e" : "#c0cbdc"
-                                font.pixelSize: 10; font.bold: true
+                            }
+                            // Si el usuario especificó un presupuesto, mostrar cuánto puede craftear y su ganancia total
+                            Label {
+                                visible: craftMarketWindow.availableBudget > 0
+                                text: {
+                                    const aff = Number(modelData.budgetAffordable || 0)
+                                    const bProf = Number(modelData.budgetProfit || 0)
+                                    if (aff <= 0) return "Presupuesto insuficiente"
+                                    return "💰 " + aff + "x max (" + (bProf >= 0 ? "+" : "") + craftMarketWindow.formatKinah(bProf) + " K)"
+                                }
+                                color: Number(modelData.budgetProfit || 0) > 0 ? "#54cf82" : "#ff9e9e"
+                                font.pixelSize: 8; font.bold: true
                             }
                         }
                         Label {
@@ -380,7 +445,7 @@ Window {
                             implicitHeight: simCol.implicitHeight + 14
 
                             property int batchCount: 10
-                            property var simResult: recipeCard.expanded ? backend.simulateBatchCraft(recipeCard.modelData, batchCount) : null
+                            property var simResult: recipeCard.expanded ? backend.simulateBatchCraft(recipeCard.modelData, batchCount, craftMarketWindow.availableBudget) : null
 
                             ColumnLayout {
                                 id: simCol
@@ -396,6 +461,58 @@ Window {
                                     Label {
                                         text: "Lote: " + parent.parent.batchCount + " crafteos"
                                         color: "#6cb2eb"; font.pixelSize: 10; font.bold: true
+                                    }
+                                }
+
+                                // Si el usuario tiene un presupuesto fijado, mostrar tarjeta de recomendación y botón para sincronizar lote
+                                Rectangle {
+                                    visible: craftMarketWindow.availableBudget > 0
+                                    Layout.fillWidth: true; implicitHeight: budgetBoxCol.implicitHeight + 10; radius: 4
+                                    color: "#182a20"; border.width: 1; border.color: "#357049"
+                                    ColumnLayout {
+                                        id: budgetBoxCol
+                                        anchors.fill: parent; anchors.margins: 6; spacing: 4
+                                        RowLayout {
+                                            Layout.fillWidth: true; spacing: 6
+                                            Label {
+                                                text: "🎯 ANÁLISIS CON TU KINAH (" + craftMarketWindow.formatKinah(craftMarketWindow.availableBudget) + " K DISPONIBLES):"
+                                                color: "#f1c778"; font.pixelSize: 9; font.bold: true
+                                                Layout.fillWidth: true
+                                            }
+                                            // Botón para ajustar el lote exactamente al límite de tu dinero
+                                            Rectangle {
+                                                property int optCount: parent.parent.parent.parent.simResult ? Number(parent.parent.parent.parent.simResult.optimalWithBudget || 0) : 0
+                                                visible: optCount > 0
+                                                implicitWidth: syncBtnLbl.implicitWidth + 10; implicitHeight: 20; radius: 3
+                                                color: "#275936"; border.width: 1; border.color: "#54cf82"
+                                                Label {
+                                                    id: syncBtnLbl; anchors.centerIn: parent
+                                                    text: "Fijar a " + parent.optCount + "x"
+                                                    color: "#ffffff"; font.pixelSize: 9; font.bold: true
+                                                }
+                                                TapHandler {
+                                                    onTapped: parent.parent.parent.parent.parent.batchCount = parent.optCount
+                                                }
+                                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                            }
+                                        }
+                                        RowLayout {
+                                            Layout.fillWidth: true; spacing: 8
+                                            Label {
+                                                text: {
+                                                    const res = parent.parent.parent.parent.simResult
+                                                    if (!res) return ""
+                                                    const aff = Number(res.budgetAffordableCount || 0)
+                                                    const cost = Number(res.budgetTotalCost || 0)
+                                                    const prof = Number(res.budgetProfit || 0)
+                                                    const roi = Number(res.budgetRoi || 0).toFixed(0)
+                                                    if (aff <= 0) return "Tu saldo actual no alcanza para comprar los ingredientes de 1 unidad."
+                                                    return "Puedes fabricar hasta " + aff + " unidades · Costo total: " + craftMarketWindow.formatKinah(cost) + " K · Ganancia neta: " + (prof >= 0 ? "+" : "") + craftMarketWindow.formatKinah(prof) + " K (" + roi + "% ROI)"
+                                                }
+                                                color: "#e8effc"; font.pixelSize: 9
+                                                Layout.fillWidth: true; wrapMode: Text.WordWrap
+                                            }
+                                        }
                                     }
                                 }
 

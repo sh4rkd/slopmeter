@@ -814,8 +814,7 @@ public:
         return out;
     }
 
-    Q_INVOKABLE QVariantMap simulateBatchCraft(const QVariantMap &recipe, int batchCount) {
-        batchCount = qBound(1, batchCount, 500);
+    Q_INVOKABLE QVariantMap simulateBatchCraft(const QVariantMap &recipe, int batchCount, double customBudget = 0.0) {
         auto res = recipe.value("result").toMap();
         int resultCountPerCraft = qMax(1, res.value("count").toInt());
         double baseSellPrice = recipe.value("sellPrice").toDouble();
@@ -828,12 +827,17 @@ public:
         double cumulativeCost = 0.0;
         double cumulativeGrossRevenue = 0.0;
         int maxProfitableBatch = 0;
+        int budgetAffordableCount = 0;
+        double budgetTotalCost = 0.0;
+        double budgetNetRevenue = 0.0;
+        double budgetProfit = 0.0;
         bool brokeEven = false;
         double taxMultiplier = 1.0 - (marketTaxRateSetting / 100.0);
         if (taxMultiplier < 0) taxMultiplier = 0.0;
 
-        // Simulate unit by unit up to batchCount (and find break-even limit up to 100)
-        int searchLimit = qMax(batchCount, 100);
+        int requestedBatch = qBound(1, batchCount, 500);
+        int searchLimit = 500;
+        bool targetReached = false;
 
         for (int i = 1; i <= searchLimit; ++i) {
             // Cost of crafting unit i
@@ -853,7 +857,6 @@ public:
             }
 
             // Sale revenue of unit i
-            // As more finished products flood the broker, price experiences mild saturation decay
             double decayFactor = 1.0 - (static_cast<double>(i - 1) / static_cast<double>(prodListings)) * 0.08;
             if (decayFactor < 0.4) decayFactor = 0.4; // Cap decay at floor 40% of base price
             double unitGrossRevenue = (baseSellPrice * decayFactor) * resultCountPerCraft;
@@ -867,9 +870,25 @@ public:
                 brokeEven = true;
             }
 
-            if (i <= batchCount) {
+            // Check budget constraint if provided
+            if (customBudget > 0.0) {
+                if (budgetTotalCost + unitCraftCost <= customBudget) {
+                    budgetAffordableCount = i;
+                    budgetTotalCost += unitCraftCost;
+                    budgetNetRevenue += unitNetRevenue;
+                }
+            }
+
+            if (i <= requestedBatch) {
                 cumulativeCost += unitCraftCost;
                 cumulativeGrossRevenue += unitGrossRevenue;
+                if (i == requestedBatch) targetReached = true;
+            }
+
+            // Optimization: if we already past requestedBatch and either found break-even or budget limit
+            if (i >= requestedBatch && (brokeEven || (customBudget > 0.0 && budgetTotalCost + unitCraftCost > customBudget))) {
+                if (customBudget <= 0.0 && i >= qMax(requestedBatch, 100)) break;
+                if (customBudget > 0.0 && budgetTotalCost + unitCraftCost > customBudget) break;
             }
         }
 
@@ -878,12 +897,22 @@ public:
         double totalRoi = cumulativeCost > 0 ? (totalProfit / cumulativeCost * 100.0) : 0.0;
 
         // Average unit values for the chosen batch
-        double avgCostPerCraft = cumulativeCost / batchCount;
-        double avgNetRevenuePerCraft = totalNetRevenue / batchCount;
-        double avgProfitPerCraft = totalProfit / batchCount;
+        double avgCostPerCraft = cumulativeCost / requestedBatch;
+        double avgNetRevenuePerCraft = totalNetRevenue / requestedBatch;
+        double avgProfitPerCraft = totalProfit / requestedBatch;
+
+        budgetProfit = budgetNetRevenue - budgetTotalCost;
+        double budgetRoi = budgetTotalCost > 0 ? (budgetProfit / budgetTotalCost * 100.0) : 0.0;
+
+        // Optimal recommended crafts with budget:
+        // You should not craft more than budget allows, AND you should not craft past maxProfitableBatch
+        int optimalWithBudget = budgetAffordableCount;
+        if (maxProfitableBatch > 0 && optimalWithBudget > maxProfitableBatch) {
+            optimalWithBudget = maxProfitableBatch;
+        }
 
         return QVariantMap{
-            {"batchCount", batchCount},
+            {"batchCount", requestedBatch},
             {"totalCost", std::round(cumulativeCost)},
             {"totalGrossRevenue", std::round(cumulativeGrossRevenue)},
             {"totalNetRevenue", std::round(totalNetRevenue)},
@@ -893,7 +922,15 @@ public:
             {"avgNetRevenuePerCraft", std::round(avgNetRevenuePerCraft)},
             {"avgProfitPerCraft", std::round(avgProfitPerCraft)},
             {"maxProfitableBatch", maxProfitableBatch},
-            {"isBatchProfitable", totalProfit > 0}
+            {"isBatchProfitable", totalProfit > 0},
+            // Budget-specific calculations
+            {"budget", customBudget},
+            {"budgetAffordableCount", budgetAffordableCount},
+            {"budgetTotalCost", std::round(budgetTotalCost)},
+            {"budgetNetRevenue", std::round(budgetNetRevenue)},
+            {"budgetProfit", std::round(budgetProfit)},
+            {"budgetRoi", std::round(budgetRoi * 10.0) / 10.0},
+            {"optimalWithBudget", optimalWithBudget}
         };
     }
     QQuickWindow *window=nullptr;
