@@ -12,7 +12,10 @@ Window {
 
     property string categoryFilter: "TODOS"
     property string searchText: ""
+    property string excludeText: ""
     property bool onlyProfitable: false
+    property string sortBy: "profit" // "profit", "roi", "sellPrice", "cost", "name"
+    property bool sortAscending: false
 
     function formatKinah(value) {
         if (value === undefined || value === null || isNaN(value)) return "0"
@@ -99,18 +102,74 @@ Window {
             Layout.fillWidth: true; spacing: 8
             TextField {
                 id: searchInput
-                placeholderText: "Buscar receta o material..."
+                placeholderText: "Buscar receta o producto..."
                 implicitHeight: 28
                 Layout.fillWidth: true
                 palette.text: "#ffffff"
                 palette.base: "#1a2433"
-                onTextChanged: craftMarketWindow.searchText = text.toLowerCase()
+                onTextChanged: craftMarketWindow.searchText = text.toLowerCase().trim()
+            }
+            TextField {
+                id: excludeInput
+                placeholderText: "Excluir recurso/material (ej. Odyle)..."
+                implicitHeight: 28
+                Layout.preferredWidth: 200
+                palette.text: "#ff9e9e"
+                palette.base: "#241a1e"
+                ToolTip.visible: hovered; ToolTip.text: "Excluye cualquier receta que requiera este material o recurso"
+                onTextChanged: craftMarketWindow.excludeText = text.toLowerCase().trim()
             }
             CheckBox {
-                text: "Solo Rentables (Beneficio > 0)"
+                text: "Solo Rentables (>0)"
                 checked: craftMarketWindow.onlyProfitable
                 palette.windowText: "#54cf82"
                 onToggled: craftMarketWindow.onlyProfitable = checked
+            }
+        }
+
+        // Barra de Ordenamiento (Ascendente / Descendente y Criterio)
+        RowLayout {
+            Layout.fillWidth: true; spacing: 8
+            Label {
+                text: "Ordenar por:"
+                color: "#9ad9ec"; font.pixelSize: 10; font.bold: true
+            }
+            ComboBox {
+                id: sortFieldCombo
+                implicitWidth: 170; implicitHeight: 26
+                model: [
+                    { label: "Beneficio Neto (Kinah)", value: "profit" },
+                    { label: "Retorno (% ROI)", value: "roi" },
+                    { label: "Precio de Venta", value: "sellPrice" },
+                    { label: "Costo de Materiales", value: "cost" },
+                    { label: "Nombre de Receta", value: "name" }
+                ]
+                textRole: "label"
+                valueRole: "value"
+                currentIndex: 0
+                onActivated: craftMarketWindow.sortBy = currentValue
+            }
+            Rectangle {
+                implicitWidth: sortOrderBtn.implicitWidth + 12; implicitHeight: 26; radius: 3
+                color: "#213247"; border.width: 1; border.color: "#415f82"
+                RowLayout {
+                    id: sortOrderBtn
+                    anchors.centerIn: parent; spacing: 4
+                    Label {
+                        text: craftMarketWindow.sortAscending ? "▲ Ascendente (Menor a Mayor)" : "▼ Descendente (Mayor a Menor)"
+                        color: "#54cf82"; font.pixelSize: 10; font.bold: true
+                    }
+                }
+                TapHandler {
+                    onTapped: craftMarketWindow.sortAscending = !craftMarketWindow.sortAscending
+                }
+                HoverHandler { id: sortHover; cursorShape: Qt.PointingHandCursor }
+                ToolTip.visible: sortHover.hovered; ToolTip.text: "Alternar orden ascendente o descendente"
+            }
+            Item { Layout.fillWidth: true }
+            Label {
+                text: recipeListView.count + " recetas encontradas"
+                color: "#7e8ea6"; font.pixelSize: 9
             }
         }
 
@@ -151,25 +210,68 @@ Window {
             model: {
                 const all = backend.craftRecipes
                 const res = []
+                const sText = craftMarketWindow.searchText
+                const exText = craftMarketWindow.excludeText
+
                 for (let i = 0; i < all.length; ++i) {
                     const r = all[i]
                     if (craftMarketWindow.categoryFilter !== "TODOS" && r.categoryName !== craftMarketWindow.categoryFilter) continue
-                    if (craftMarketWindow.searchText !== "") {
-                        const nameMatch = (r.name || "").toLowerCase().includes(craftMarketWindow.searchText)
-                        const origMatch = (r.originalName || "").toLowerCase().includes(craftMarketWindow.searchText)
+                    
+                    // Exclusión de recursos/materiales
+                    if (exText !== "") {
+                        let containsExcluded = false
+                        if (r.materials) {
+                            for (let j = 0; j < r.materials.length; ++j) {
+                                const mName = (r.materials[j].name || "").toLowerCase()
+                                if (mName.includes(exText)) {
+                                    containsExcluded = true
+                                    break
+                                }
+                            }
+                        }
+                        if (containsExcluded) continue
+                    }
+
+                    // Búsqueda por texto
+                    if (sText !== "") {
+                        const nameMatch = (r.name || "").toLowerCase().includes(sText)
+                        const origMatch = (r.originalName || "").toLowerCase().includes(sText)
                         let matMatch = false
                         if (r.materials) {
                             for (let j = 0; j < r.materials.length; ++j) {
-                                if ((r.materials[j].name || "").toLowerCase().includes(craftMarketWindow.searchText)) {
+                                if ((r.materials[j].name || "").toLowerCase().includes(sText)) {
                                     matMatch = true; break;
                                 }
                             }
                         }
                         if (!nameMatch && !origMatch && !matMatch) continue
                     }
+
                     if (craftMarketWindow.onlyProfitable && Number(r.profit || 0) <= 0) continue
                     res.push(r)
                 }
+
+                // Ordenamiento
+                const asc = craftMarketWindow.sortAscending
+                const sortBy = craftMarketWindow.sortBy
+                res.sort(function(a, b) {
+                    let va = 0, vb = 0
+                    if (sortBy === "profit") {
+                        va = Number(a.profit || 0); vb = Number(b.profit || 0)
+                    } else if (sortBy === "roi") {
+                        va = Number(a.roiPct || 0); vb = Number(b.roiPct || 0)
+                    } else if (sortBy === "sellPrice") {
+                        va = Number(a.sellPrice || 0); vb = Number(b.sellPrice || 0)
+                    } else if (sortBy === "cost") {
+                        va = Number(a.totalCost || 0); vb = Number(b.totalCost || 0)
+                    } else if (sortBy === "name") {
+                        const na = (a.name || "").toLowerCase()
+                        const nb = (b.name || "").toLowerCase()
+                        return asc ? na.localeCompare(nb) : nb.localeCompare(na)
+                    }
+                    return asc ? (va - vb) : (vb - va)
+                })
+
                 return res
             }
 
