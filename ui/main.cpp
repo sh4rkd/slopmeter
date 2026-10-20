@@ -133,6 +133,7 @@ class Bridge : public QObject {
     Q_PROPERTY(QString selectedMarketServerName READ selectedMarketServerName NOTIFY marketChanged)
     Q_PROPERTY(bool marketLoading READ marketLoading NOTIFY marketChanged)
     Q_PROPERTY(QString marketStatus READ marketStatus NOTIFY marketChanged)
+    Q_PROPERTY(double marketTaxRate READ marketTaxRate WRITE setMarketTaxRate NOTIFY marketChanged)
     Q_PROPERTY(QVariantList craftRecipes READ craftRecipes NOTIFY marketChanged)
     Q_PROPERTY(QVariantMap detailPlayer READ detailPlayer NOTIFY detailChanged)
     Q_PROPERTY(QVariantMap detailFight READ detailFight NOTIFY detailChanged)
@@ -609,11 +610,21 @@ public:
     QVariantList marketServerList;
     int selectedMarketServerId=QSettings().value("market/serverId", 11101).toInt();
     QString selectedMarketServerNameStr="Siel (NAE)";
+    double marketTaxRateSetting=QSettings().value("market/taxRate", 10.0).toDouble();
     bool isMarketLoading=false;
     QString marketStatusMsg="Listo para consultar precios";
     QMap<int, double> marketPrices; // item_key -> unit price in Kinah
     QVariantList cachedRecipes;
     bool recipesLoaded=false;
+
+    double marketTaxRate() const {return marketTaxRateSetting;}
+    void setMarketTaxRate(double val) {
+        val = qBound(0.0, val, 30.0);
+        if (qFuzzyCompare(marketTaxRateSetting, val)) return;
+        marketTaxRateSetting = val;
+        QSettings().setValue("market/taxRate", val);
+        emit marketChanged();
+    }
 
     QVariantList marketServers() const {
         if (!marketServerList.isEmpty()) return marketServerList;
@@ -728,16 +739,18 @@ public:
                 enrichedMats.append(m);
             }
 
-            // Broker tax is approx 7%
-            double netRevenue = sellPrice * resultCount * 0.93;
+            // Broker tax in Aion 2 (Default is 10.0%, configurable by user)
+            double taxMultiplier = 1.0 - (marketTaxRateSetting / 100.0);
+            if (taxMultiplier < 0) taxMultiplier = 0;
+            double netRevenue = sellPrice * resultCount * taxMultiplier;
             double profit = netRevenue - totalCost;
             double roiPct = totalCost > 0 ? (profit / totalCost * 100.0) : 0.0;
 
             r["materials"] = enrichedMats;
-            r["sellPrice"] = sellPrice;
-            r["totalCost"] = totalCost;
-            r["profit"] = profit;
-            r["roiPct"] = roiPct;
+            r["sellPrice"] = std::round(sellPrice);
+            r["totalCost"] = std::round(totalCost);
+            r["profit"] = std::round(profit);
+            r["roiPct"] = std::round(roiPct * 10.0) / 10.0;
             r["hasPrices"] = (sellPrice > 0 && !missingAnyPrice);
 
             out.append(r);

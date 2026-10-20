@@ -14,6 +14,23 @@ Window {
     property string searchText: ""
     property bool onlyProfitable: false
 
+    function formatKinah(value) {
+        if (value === undefined || value === null || isNaN(value)) return "0"
+        const num = Number(value)
+        if (num === 0) return "0"
+        const sign = num < 0 ? "-" : ""
+        const absVal = Math.abs(Math.round(num))
+        if (absVal >= 1000000000) {
+            return sign + (absVal / 1000000000).toFixed(2) + "B"
+        } else if (absVal >= 1000000) {
+            return sign + (absVal / 1000000).toFixed(2) + "M"
+        } else if (absVal >= 10000) {
+            return sign + (absVal / 1000).toFixed(1) + "K"
+        } else {
+            return sign + absVal.toLocaleString(Qt.locale(), 'f', 0)
+        }
+    }
+
     ColumnLayout {
         anchors.fill: parent; anchors.margins: 14; spacing: 8
 
@@ -51,18 +68,28 @@ Window {
 
         // Status bar
         Rectangle {
-            Layout.fillWidth: true; implicitHeight: 22; radius: 3
+            Layout.fillWidth: true; implicitHeight: 28; radius: 3
             color: "#1c2738"; border.width: 1; border.color: "#2a3d57"
             RowLayout {
-                anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8
+                anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8; spacing: 8
                 Label {
                     text: backend.marketStatus
                     color: "#9ad9ec"; font.pixelSize: 10
                     Layout.fillWidth: true; elide: Text.ElideRight
                 }
                 Label {
-                    text: "Impuesto estimado Broker: 7%"
-                    color: "#7e8ea6"; font.pixelSize: 9
+                    text: "Tasa Impuesto Broker:"
+                    color: "#f1c778"; font.pixelSize: 10; font.bold: true
+                }
+                SpinBox {
+                    id: taxSpinBox
+                    from: 0; to: 30; stepSize: 1
+                    implicitWidth: 85; implicitHeight: 24
+                    value: Math.round(backend.marketTaxRate)
+                    textFromValue: function(value) { return value + " %" }
+                    valueFromText: function(text) { return parseInt(text) || 0 }
+                    onValueModified: backend.marketTaxRate = value
+                    ToolTip.visible: hovered; ToolTip.text: "Tasa de deducción del Broker en Aion 2 (Estándar: 10% / Varía con membresía)"
                 }
             }
         }
@@ -178,11 +205,11 @@ Window {
                         ColumnLayout {
                             spacing: 1
                             Label {
-                                text: "Costo: " + (Number(modelData.totalCost || 0) > 0 ? Number(modelData.totalCost || 0).toLocaleString() + " K" : "Sin cotizar")
+                                text: "Costo: " + (Number(modelData.totalCost || 0) > 0 ? (craftMarketWindow.formatKinah(modelData.totalCost) + " K") : "Sin cotizar")
                                 color: "#e09090"; font.pixelSize: 9
                             }
                             Label {
-                                text: "Venta: " + (Number(modelData.sellPrice || 0) > 0 ? Number(modelData.sellPrice || 0).toLocaleString() + " K" : "Sin cotizar")
+                                text: "Venta: " + (Number(modelData.sellPrice || 0) > 0 ? (craftMarketWindow.formatKinah(modelData.sellPrice) + " K") : "Sin cotizar")
                                 color: "#9ad9ec"; font.pixelSize: 9
                             }
                         }
@@ -197,8 +224,8 @@ Window {
                                 text: {
                                     const p = Number(modelData.profit || 0)
                                     const roi = Number(modelData.roiPct || 0).toFixed(0)
-                                    if (p > 0) return "+" + p.toLocaleString() + " K (+" + roi + "%)"
-                                    if (p < 0) return p.toLocaleString() + " K (" + roi + "%)"
+                                    if (p > 0) return "+" + craftMarketWindow.formatKinah(p) + " K (+" + roi + "%)"
+                                    if (p < 0) return craftMarketWindow.formatKinah(p) + " K (" + roi + "%)"
                                     return "0 K"
                                 }
                                 color: Number(modelData.profit || 0) > 0 ? "#54cf82" : Number(modelData.profit || 0) < 0 ? "#ff9e9e" : "#c0cbdc"
@@ -231,7 +258,7 @@ Window {
                                     Layout.fillWidth: true; elide: Text.ElideRight
                                 }
                                 Label {
-                                    text: Number(modelData.unitPrice || 0) > 0 ? (Number(modelData.unitPrice).toLocaleString() + " K c/u = " + Number(modelData.totalCost || 0).toLocaleString() + " K") : "Precio no listado"
+                                    text: Number(modelData.unitPrice || 0) > 0 ? (craftMarketWindow.formatKinah(modelData.unitPrice) + " K c/u = " + craftMarketWindow.formatKinah(modelData.totalCost) + " K") : "Precio no listado"
                                     color: Number(modelData.unitPrice || 0) > 0 ? "#9ad9ec" : "#7e8ea6"
                                     font.pixelSize: 9
                                 }
