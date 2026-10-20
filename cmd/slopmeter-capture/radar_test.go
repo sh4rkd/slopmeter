@@ -64,63 +64,63 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 		t:      now.Add(100 * time.Millisecond),
 	}, self)
 
-	// 1. Hidden Cube (1200039) 20m in Front (+X) and 5m Up (+Z) -> (13000, 10000, 5500)
-	chestPayload := buildSpawnPayload(501, 4, "", 1200039, 13000, 10000, 5500)
+	// 1. Hidden Cube 1 (1200039) 20m in Front (+X) and 5m Up (+Z) -> (13000, 10000, 5500)
+	chest1Payload := buildSpawnPayload(501, 4, "", 1200039, 13000, 10000, 5500)
 	fight.observeRadar(aMessage{
 		opcode:  0x3640,
 		flags:   wire.FromServer,
-		payload: chestPayload,
+		payload: chest1Payload,
 		t:       now.Add(200 * time.Millisecond),
 	}, self)
 
-	// 2. Odyle (1080001) 15m to the Right (+Y) and 4m Down (-Z) -> (11000, 11500, 4600)
-	odylePayload := buildSpawnPayload(502, 4, "", 1080001, 11000, 11500, 4600)
+	// 2. Hidden Cube 2 (1000295) 15m to the Right (+Y) and 4m Down (-Z) -> (11000, 11500, 4600)
+	chest2Payload := buildSpawnPayload(502, 4, "", 1000295, 11000, 11500, 4600)
 	fight.observeRadar(aMessage{
 		opcode:  0x3641,
 		flags:   wire.FromServer,
-		payload: odylePayload,
+		payload: chest2Payload,
 		t:       now.Add(300 * time.Millisecond),
 	}, self)
 
-	// 3. Orichalcum Ore (1080101) 10m to the Left (-Y) and Level (Z=5000) -> (11000, 9000, 5000)
-	orePayload := buildSpawnPayload(503, 2, "", 1080101, 11000, 9000, 5000)
+	// 3. Asmodian Hidden Cube (1301199) 10m to the Left (-Y) and Level (Z=5000) -> (11000, 9000, 5000)
+	chest3Payload := buildSpawnPayload(503, 2, "", 1301199, 11000, 9000, 5000)
 	fight.observeRadar(aMessage{
 		opcode:  0x3640,
 		flags:   wire.FromServer,
-		payload: orePayload,
+		payload: chest3Payload,
 		t:       now.Add(400 * time.Millisecond),
 	}, self)
 
-	// 4. Sapphire Gemstone (1080501) 12m to the Right (+Y) and 3m Up (+Z) -> (11000, 11200, 5300)
-	gemPayload := buildSpawnPayload(504, 4, "", 1080501, 11000, 11200, 5300)
+	// 4. Cube with inline name "Rare Hidden Chest" (code 9999999) 12m to the Right (+Y) and 3m Up (+Z) -> (11000, 11200, 5300)
+	chest4Payload := buildSpawnPayload(504, 4, "Rare Hidden Chest", 9999999, 11000, 11200, 5300)
 	fight.observeRadar(aMessage{
 		opcode:  0x3640,
 		flags:   wire.FromServer,
-		payload: gemPayload,
+		payload: chest4Payload,
 		t:       now.Add(450 * time.Millisecond),
 	}, self)
 
-	// 5. Azpha (1090601) 25m Behind (-X) -> (8500, 10000, 5000)
-	herbPayload := buildSpawnPayload(505, 4, "", 1090601, 8500, 10000, 5000)
+	// 5. Hidden Cube V04 (1200040) 25m Behind (-X) -> (8500, 10000, 5000)
+	chest5Payload := buildSpawnPayload(505, 4, "", 1200040, 8500, 10000, 5000)
 	fight.observeRadar(aMessage{
 		opcode:  0x3640,
 		flags:   wire.FromServer,
-		payload: herbPayload,
+		payload: chest5Payload,
 		t:       now.Add(480 * time.Millisecond),
 	}, self)
 
-	// 6. Asvata Log (1090201) 18m Front (+X) -> (12800, 10000, 5000)
-	woodPayload := buildSpawnPayload(506, 4, "", 1090201, 12800, 10000, 5000)
+	// 6. Non-cube resource or monster (1090201) -> should NOT be tracked on radar
+	ignoredPayload := buildSpawnPayload(506, 4, "", 1090201, 12800, 10000, 5000)
 	fight.observeRadar(aMessage{
 		opcode:  0x3640,
 		flags:   wire.FromServer,
-		payload: woodPayload,
+		payload: ignoredPayload,
 		t:       now.Add(500 * time.Millisecond),
 	}, self)
 
 	snap := fight.snapshot(identities{self: self, name: "Tester"}, now.Add(time.Second))
-	if len(snap.Radar) != 6 {
-		t.Fatalf("expected 6 radar items, got %d", len(snap.Radar))
+	if len(snap.Radar) != 5 {
+		t.Fatalf("expected 5 radar items (only cubes), got %d", len(snap.Radar))
 	}
 
 	byID := make(map[game.Entity]radarDisplay)
@@ -128,29 +128,25 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 		byID[item.ID] = item
 	}
 
-	chest := byID[501]
-	if chest.Category != radarCategoryChest || chest.Name != "Hidden Cube" || chest.HorizDir != "Frente" || chest.VertDir != "Arriba" || chest.ZDelta != 5.0 || chest.RelX != 0.0 || chest.RelY != 20.0 {
-		t.Fatalf("unexpected chest radar item: %+v", chest)
+	chest1 := byID[501]
+	if chest1.Category != radarCategoryChest || chest1.Name != "Hidden Cube" || chest1.HorizDir != "Frente" || chest1.VertDir != "Arriba" || chest1.ZDelta != 5.0 || chest1.RelX != 0.0 || chest1.RelY != 20.0 {
+		t.Fatalf("unexpected chest1 radar item: %+v", chest1)
 	}
-	odyle := byID[502]
-	if odyle.Category != radarCategoryOdyle || odyle.Name != "Odyle" || odyle.HorizDir != "Der" || odyle.VertDir != "Abajo" || odyle.ZDelta != -4.0 || odyle.RelX != 15.0 || odyle.RelY != 0.0 {
-		t.Fatalf("unexpected odyle radar item: %+v", odyle)
+	chest2 := byID[502]
+	if chest2.Category != radarCategoryChest || chest2.Name != "Hidden Cube" || chest2.HorizDir != "Der" || chest2.VertDir != "Abajo" || chest2.ZDelta != -4.0 || chest2.RelX != 15.0 || chest2.RelY != 0.0 {
+		t.Fatalf("unexpected chest2 radar item: %+v", chest2)
 	}
-	ore := byID[503]
-	if ore.Category != radarCategoryOre || ore.Name != "Orichalcum Ore" || ore.HorizDir != "Izq" || ore.VertDir != "Nivel" || ore.Distance != 10.0 || ore.RelX != -10.0 || ore.RelY != 0.0 {
-		t.Fatalf("unexpected ore radar item: %+v", ore)
+	chest3 := byID[503]
+	if chest3.Category != radarCategoryChest || chest3.Name != "Asmodian Hidden Cube V04" || chest3.HorizDir != "Izq" || chest3.VertDir != "Nivel" || chest3.Distance != 10.0 || chest3.RelX != -10.0 || chest3.RelY != 0.0 {
+		t.Fatalf("unexpected chest3 radar item: %+v", chest3)
 	}
-	gem := byID[504]
-	if gem.Category != radarCategoryGem || gem.Name != "Sapphire Gemstone" || gem.HorizDir != "Der" || gem.VertDir != "Arriba" || gem.ZDelta != 3.0 || gem.RelX != 12.0 || gem.RelY != 0.0 {
-		t.Fatalf("unexpected gem radar item: %+v", gem)
+	chest4 := byID[504]
+	if chest4.Category != radarCategoryChest || chest4.Name != "Rare Hidden Chest" || chest4.HorizDir != "Der" || chest4.VertDir != "Arriba" || chest4.ZDelta != 3.0 || chest4.RelX != 12.0 || chest4.RelY != 0.0 {
+		t.Fatalf("unexpected chest4 radar item: %+v", chest4)
 	}
-	herb := byID[505]
-	if herb.Category != radarCategoryHerb || herb.Name != "Azpha" || herb.HorizDir != "Atrás" || herb.VertDir != "Nivel" || herb.Distance != 25.0 || herb.RelX != 0.0 || herb.RelY != -25.0 {
-		t.Fatalf("unexpected herb radar item: %+v", herb)
-	}
-	wood := byID[506]
-	if wood.Category != radarCategoryWood || wood.Name != "Asvata Log" || wood.HorizDir != "Frente" || wood.VertDir != "Nivel" || wood.Distance != 18.0 || wood.RelX != 0.0 || wood.RelY != 18.0 {
-		t.Fatalf("unexpected wood radar item: %+v", wood)
+	chest5 := byID[505]
+	if chest5.Category != radarCategoryChest || chest5.Name != "Hidden Cube V04" || chest5.HorizDir != "Atrás" || chest5.VertDir != "Nivel" || chest5.Distance != 25.0 || chest5.RelX != 0.0 || chest5.RelY != -25.0 {
+		t.Fatalf("unexpected chest5 radar item: %+v", chest5)
 	}
 
 	// Despawn chest on Death packet
@@ -162,7 +158,7 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 	}, self)
 
 	snapAfter := fight.snapshot(identities{self: self, name: "Tester"}, now.Add(2*time.Second))
-	if len(snapAfter.Radar) != 5 {
+	if len(snapAfter.Radar) != 4 {
 		t.Fatalf("expected 5 radar items after chest despawn, got %d", len(snapAfter.Radar))
 	}
 }
@@ -184,11 +180,11 @@ func TestRadarClientMovementAndByteInlineName(t *testing.T) {
 	p = binary.AppendUvarint(p, 777)
 	p = append(p, 0x1c, 0x00, 0x00, 0x00) // 4-byte mask
 	p = append(p, 0x01)                   // gate: inline name present
-	name := "Ruby Gemstone"
+	name := "Special Hidden Cube"
 	p = append(p, byte(len(name)))
 	p = append(p, []byte(name)...)
 	var codeBytes [4]byte
-	binary.LittleEndian.PutUint32(codeBytes[:], 1080503)
+	binary.LittleEndian.PutUint32(codeBytes[:], 9999999)
 	p = append(p, codeBytes[:]...)
 	p = append(p, 0x40, 0x02) // subtype
 	var posBytes [12]byte
@@ -207,30 +203,25 @@ func TestRadarClientMovementAndByteInlineName(t *testing.T) {
 		t.Fatalf("expected 1 radar item, got %d", len(snap.Radar))
 	}
 	item := snap.Radar[0]
-	if item.Name != "Ruby Gemstone" || item.Category != radarCategoryGem || item.Distance != 20.0 || item.HorizDir != "Der" {
+	if item.Name != "Special Hidden Cube" || item.Category != radarCategoryChest || item.Distance != 20.0 || item.HorizDir != "Der" {
 		t.Fatalf("unexpected item parsed: %+v", item)
 	}
 }
 
-func TestRadarBroadRangesClassification(t *testing.T) {
-	cases := []struct {
+func TestRadarClassificationAccuracy(t *testing.T) {
+	// Verified Hidden Cubes should succeed
+	validCubes := []struct {
 		code     uint32
 		wantCat  radarCategory
 		wantName string
 	}{
-		{1200550, radarCategoryChest, "Hidden Cube (1200550)"},
-		{1305100, radarCategoryChest, "Hidden Cube (1305100)"},
-		{2900150, radarCategoryChest, "Hidden Cube / Chest (2900150)"},
-		{700100, radarCategoryChest, "Hidden Cube (700100)"},
-		{1081500, radarCategoryHerb, "Herb / Plant (1081500)"},
-		{1050000, radarCategoryHerb, "Herb / Plant (1050000)"},
-		{1580050, radarCategoryOdyle, "Odyle (1580050)"},
-		{1080550, radarCategoryGem, "Gemstone (1080550)"},
-		{1080150, radarCategoryOre, "Orichalcum Ore (1080150)"},
-		{1080250, radarCategoryWood, "Wood Log (1080250)"},
+		{1000295, radarCategoryChest, "Hidden Cube"},
+		{1200039, radarCategoryChest, "Hidden Cube"},
+		{1301199, radarCategoryChest, "Asmodian Hidden Cube V04"},
+		{1401335, radarCategoryChest, "Hidden Cube"},
 	}
 
-	for _, tc := range cases {
+	for _, tc := range validCubes {
 		name, cat, ok := classifyRadarTarget(tc.code, 0, "")
 		if !ok {
 			t.Errorf("code %d: expected ok=true, got false", tc.code)
@@ -240,6 +231,27 @@ func TestRadarBroadRangesClassification(t *testing.T) {
 		}
 		if name != tc.wantName {
 			t.Errorf("code %d: expected name %s, got %s", tc.code, tc.wantName, name)
+		}
+	}
+
+	// Non-cube resources and background entities should be completely ignored (ok == false)
+	ignoredCodes := []uint32{
+		1081500, // Herb
+		1050000, // Plant
+		1580050, // Odyle
+		1080550, // Gem
+		1080150, // Ore
+		1080250, // Wood
+		1200550, // Misc NPC
+		1305100, // Misc NPC
+		2900150, // Misc Object
+		700100,  // Misc Object
+	}
+
+	for _, code := range ignoredCodes {
+		_, _, ok := classifyRadarTarget(code, 0, "")
+		if ok {
+			t.Errorf("code %d: expected non-cube entity to be ignored (ok=false), but got ok=true", code)
 		}
 	}
 }
@@ -303,5 +315,58 @@ func TestRadarRealWorldCubeLifecycle3436(t *testing.T) {
 		t.Fatalf("expected 0 radar items after 0x3635 removal, got %d", len(snapAfter.Radar))
 	}
 }
+
+func TestRadarDespawnOpcodes(t *testing.T) {
+	now := time.Now()
+	fight := newEncounter(0, 5*time.Second, 90*time.Second)
+
+	// Set player position at origin
+	selfPosBytes := make([]byte, 16)
+	putVec3(selfPosBytes[4:], 1000.0, 1000.0, 100.0)
+	fight.observeRadar(aMessage{
+		opcode:  0x382A,
+		flags:   wire.FromServer,
+		payload: selfPosBytes,
+		t:       now,
+	}, 100)
+
+	// Spawn cube 888 close to player (within 3m = 300cm)
+	fight.radar.upsertEntity(now, 888, 1200039, 0, "Hidden Cube", game.Pos{X: 1100.0, Y: 1000.0, Z: 100.0})
+	// Spawn cube 999 far from player (50m away)
+	fight.radar.upsertEntity(now, 999, 1200039, 0, "Hidden Cube", game.Pos{X: 6000.0, Y: 1000.0, Z: 100.0})
+
+	if len(fight.radar.entities) != 2 {
+		t.Fatalf("expected 2 entities, got %d", len(fight.radar.entities))
+	}
+
+	// 1. Test 0x8D6D: collects nearby item (888 within 600cm)
+	fight.observeRadar(aMessage{
+		opcode:  0x8D6D,
+		flags:   wire.FromServer,
+		payload: []byte{0x01, 0x02},
+		t:       now.Add(10 * time.Millisecond),
+	}, 100)
+
+	if _, found := fight.radar.entities[888]; found {
+		t.Fatalf("expected entity 888 to be removed by nearby loot opcode 0x8D6D")
+	}
+	if _, found := fight.radar.entities[999]; !found {
+		t.Fatalf("expected entity 999 to remain after 0x8D6D")
+	}
+
+	// 2. Test 0x3642: despawns entity 999
+	payload999 := append(binary.AppendUvarint(nil, 999), 0x01, 0x02)
+	fight.observeRadar(aMessage{
+		opcode:  0x3642,
+		flags:   wire.FromServer,
+		payload: payload999,
+		t:       now.Add(20 * time.Millisecond),
+	}, 100)
+
+	if len(fight.radar.entities) != 0 {
+		t.Fatalf("expected 0 entities after 0x3642 despawn, got %d", len(fight.radar.entities))
+	}
+}
+
 
 

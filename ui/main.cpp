@@ -104,6 +104,7 @@ class Bridge : public QObject {
     Q_PROPERTY(QVariantList detailChoices READ detailChoices NOTIFY detailChanged)
     Q_PROPERTY(bool isPvP READ isPvP NOTIFY pvpChanged)
     Q_PROPERTY(QVariantMap pvpSummary READ pvpSummary NOTIFY pvpChanged)
+    Q_PROPERTY(bool radarSimpleMode READ radarSimpleMode WRITE setRadarSimpleMode NOTIFY radarChanged)
     Q_PROPERTY(bool radarEnabled READ radarEnabled WRITE setRadarEnabled NOTIFY radarChanged)
     Q_PROPERTY(bool radarChests READ radarChests WRITE setRadarChests NOTIFY radarChanged)
     Q_PROPERTY(bool radarOdyle READ radarOdyle WRITE setRadarOdyle NOTIFY radarChanged)
@@ -178,6 +179,9 @@ public:
     bool radarWoodSetting=QSettings().value("radar/wood",true).toBool();
     bool radarOtherSetting=QSettings().value("radar/other",false).toBool();
     QString radarItemFilterSetting=QSettings().value("radar/itemFilter",QString()).toString();
+    bool radarSimpleModeSetting=QSettings().value("radar/simpleMode",false).toBool();
+    bool radarSimpleMode() const {return radarSimpleModeSetting;}
+    void setRadarSimpleMode(bool value) {if(radarSimpleModeSetting==value) return;radarSimpleModeSetting=value;QSettings().setValue("radar/simpleMode",value);emit radarChanged();}
     bool radarEnabled() const {return radarEnabledSetting;}
     void setRadarEnabled(bool value) {if(radarEnabledSetting==value) return;radarEnabledSetting=value;QSettings().setValue("radar/enabled",value);emit radarChanged();}
     bool radarChests() const {return radarChestsSetting;}
@@ -199,7 +203,7 @@ public:
     QString radarItemFilter() const {return radarItemFilterSetting;}
     void setRadarItemFilter(const QString &value) {if(radarItemFilterSetting==value) return;radarItemFilterSetting=value;QSettings().setValue("radar/itemFilter",value);emit radarChanged();}
     int radarSelectedIdSetting=0;
-    double radarRangeMetersSetting=70.0;
+    double radarRangeMetersSetting=110.0;
     QString radarSubmenuSetting="";
     int radarSelectedId() const {return radarSelectedIdSetting;}
     void setRadarSelectedId(int val) {if(radarSelectedIdSetting==val) return;radarSelectedIdSetting=val;emit radarSelectionChanged();}

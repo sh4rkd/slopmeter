@@ -149,7 +149,7 @@ Window {
                         implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32
                         palette.buttonText: backend.radarEnabled ? "#54cf82" : "#e6edf6"
                         onClicked: backend.radarEnabled = !backend.radarEnabled
-                        ToolTip.visible: hovered; ToolTip.text: backend.radarEnabled ? "Radar detector ON (Cofres / Odyle / Recursos)" : "Toggle Radar detector (Cofres / Odyle / Recursos)"
+                        ToolTip.visible: hovered; ToolTip.text: backend.radarEnabled ? "Radar detector ON (Hidden Cubes)" : "Toggle Radar detector (Hidden Cubes)"
                     }
                     Button { objectName: "settingsButton"; text: "⚙"; implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32; onClicked: meter.openSettings(); ToolTip.visible: hovered; ToolTip.text: "Meter settings" }
                     Button { objectName: "resetDamageButton"; text: "↻"; implicitWidth: backend.minimalistMode ? 24 : 32; implicitHeight: backend.minimalistMode ? 24 : 32; onClicked: backend.resetDamage(); ToolTip.visible: hovered; ToolTip.text: "Reset current fight damage"; Accessible.name: "Reset current fight damage" }
@@ -212,8 +212,24 @@ Window {
                     RowLayout {
                         Layout.fillWidth: true; spacing: 3
                         Label {
-                            text: "◎ MAPA"
+                            text: backend.radarSimpleMode ? "◎ AVISO CUBO" : "◎ MAPA"
                             color: "#54cf82"; font.pixelSize: 10; font.bold: true
+                        }
+                        Rectangle {
+                            implicitWidth: modeLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
+                            color: backend.radarSimpleMode ? "#203a30" : "#1f2b3d"
+                            border.width: 1; border.color: backend.radarSimpleMode ? "#54cf82" : "#384b66"
+                            Label {
+                                id: modeLbl; anchors.centerIn: parent
+                                text: backend.radarSimpleMode ? "Sencillo" : "2D Radar"
+                                color: backend.radarSimpleMode ? "#54cf82" : "#9ad9ec"
+                                font.pixelSize: 9; font.bold: true
+                            }
+                            TapHandler {
+                                onTapped: backend.radarSimpleMode = !backend.radarSimpleMode
+                            }
+                            HoverHandler { id: modeHover; cursorShape: Qt.PointingHandCursor }
+                            ToolTip.visible: modeHover.hovered; ToolTip.text: "Cambiar entre Radar 2D completo y Modo Sencillo (solo alerta de texto y dirección)"
                         }
                         Rectangle {
                             implicitWidth: rangeLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
@@ -226,29 +242,31 @@ Window {
                             TapHandler {
                                 onTapped: {
                                     if (backend.radarRangeMeters <= 40) backend.radarRangeMeters = 70
-                                    else if (backend.radarRangeMeters <= 70) backend.radarRangeMeters = 120
+                                    else if (backend.radarRangeMeters <= 70) backend.radarRangeMeters = 110
+                                    else if (backend.radarRangeMeters <= 110) backend.radarRangeMeters = 150
                                     else backend.radarRangeMeters = 40
                                 }
                             }
                             HoverHandler { id: rangeHover; cursorShape: Qt.PointingHandCursor }
-                            ToolTip.visible: rangeHover.hovered; ToolTip.text: "Cambiar zoom del radar (40m / 70m / 120m)"
+                            ToolTip.visible: rangeHover.hovered; ToolTip.text: "Cambiar zoom del radar (40m / 70m / 110m / 150m)"
                         }
                         Item { Layout.fillWidth: true }
                         Repeater {
                             model: [
-                                { key: "chest", label: "Cubo", active: backend.radarChests, color: "#f2c15a" },
-                                { key: "odyle", label: "Odyle", active: backend.radarOdyle, color: "#6be0ff" },
-                                { key: "gem", label: "Gemas", active: backend.radarGems, color: "#e082ff" },
-                                { key: "ore", label: "Mineral", active: backend.radarOres, color: "#ff9f5a" },
-                                { key: "herb", label: "Hierbas", active: backend.radarHerbs, color: "#7be35a" },
-                                { key: "wood", label: "Madera", active: backend.radarWood, color: "#c89b6e" },
-                                { key: "other", label: "Otros", active: backend.radarOther, color: "#c0cbdc" }
+                                { key: "chest", label: "Cubos", active: backend.radarChests, color: "#f2c15a", visible: true },
+                                { key: "odyle", label: "Odyle", active: backend.radarOdyle, color: "#6be0ff", visible: false },
+                                { key: "gem", label: "Gemas", active: backend.radarGems, color: "#e082ff", visible: false },
+                                { key: "ore", label: "Mineral", active: backend.radarOres, color: "#ff9f5a", visible: false },
+                                { key: "herb", label: "Hierbas", active: backend.radarHerbs, color: "#7be35a", visible: false },
+                                { key: "wood", label: "Madera", active: backend.radarWood, color: "#c89b6e", visible: false },
+                                { key: "other", label: "Otros", active: backend.radarOther, color: "#c0cbdc", visible: false }
                             ]
                             delegate: Rectangle {
                                 required property var modelData
                                 objectName: "radarFilter_" + modelData.key
-                                implicitWidth: pillLabel.implicitWidth + 8
-                                implicitHeight: 17; radius: 3
+                                visible: modelData.visible
+                                implicitWidth: modelData.visible ? (pillLabel.implicitWidth + 8) : 0
+                                implicitHeight: modelData.visible ? 17 : 0; radius: 3
                                 color: modelData.active ? Qt.rgba(40/255, 58/255, 78/255, 0.92) : "transparent"
                                 border.width: 1
                                 border.color: modelData.active ? modelData.color : "#3b495e"
@@ -309,7 +327,79 @@ Window {
                             }
                         }
                     }
+                    // Modo Sencillo de Radar: Notificación directa con alerta, dirección y distancia
+                    Rectangle {
+                        id: radarSimpleContainer
+                        objectName: "radarSimpleContainer"
+                        visible: backend.radarSimpleMode
+                        Layout.fillWidth: true
+                        implicitHeight: simpleCol.implicitHeight + 12
+                        radius: 4
+                        color: backend.displayRadar.length > 0 ? (backend.minimalistMode ? Qt.rgba(24/255, 38/255, 30/255, 0.88) : "#152a22") : (backend.minimalistMode ? Qt.rgba(20/255, 28/255, 40/255, 0.75) : "#141e2b")
+                        border.width: 1.5
+                        border.color: backend.displayRadar.length > 0 ? "#54cf82" : "#2d3d52"
+                        ColumnLayout {
+                            id: simpleCol
+                            anchors.fill: parent; anchors.margins: 6; spacing: 4
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: 6
+                                Rectangle {
+                                    width: 10; height: 10; radius: 5
+                                    color: backend.displayRadar.length > 0 ? "#54cf82" : "#7e8ea6"
+                                    border.width: 1; border.color: "#ffffff"
+                                }
+                                Label {
+                                    objectName: "radarSimpleTitle"
+                                    text: backend.displayRadar.length > 0 ? ("¡HAY " + (backend.displayRadar.length === 1 ? "UN CUBO CERCANO!" : backend.displayRadar.length + " CUBOS CERCANOS!")) : "Sin cubos en rango (110m)"
+                                    color: backend.displayRadar.length > 0 ? "#54cf82" : "#7e8ea6"
+                                    font.pixelSize: 11; font.bold: true
+                                    Layout.fillWidth: true
+                                }
+                                Label {
+                                    visible: backend.displayRadar.length > 0
+                                    text: {
+                                        const t = radarSection.selectedTarget()
+                                        return radarSection.hasTarget(t) ? (Number(t.distance || 0).toFixed(0) + "m") : ""
+                                    }
+                                    color: "#f2c15a"; font.pixelSize: 12; font.bold: true
+                                }
+                            }
+                            Rectangle {
+                                visible: backend.displayRadar.length > 0
+                                Layout.fillWidth: true; implicitHeight: 24; radius: 3
+                                color: "#1b3329"
+                                border.width: 1; border.color: "#3d6b55"
+                                RowLayout {
+                                    anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8; spacing: 6
+                                    Label {
+                                        objectName: "radarSimpleDirection"
+                                        text: {
+                                            const t = radarSection.selectedTarget()
+                                            if (!radarSection.hasTarget(t)) return ""
+                                            const h = (t.horizDir || "Frente").toUpperCase()
+                                            const v = (t.vertDir || "Nivel").toUpperCase()
+                                            const arrow = backend.radarHorizArrow(t.horizDir)
+                                            let vText = ""
+                                            if (t.vertDir === "Arriba") vText = "▲ ARRIBA"
+                                            else if (t.vertDir === "Abajo") vText = "▼ ABAJO"
+                                            else vText = "• MISMO NIVEL"
+                                            return arrow + "  |  " + vText + "  |  A " + Number(t.distance || 0).toFixed(0) + " METROS"
+                                        }
+                                        color: "#ffffff"; font.pixelSize: 10; font.bold: true
+                                        Layout.fillWidth: true; elide: Text.ElideRight
+                                    }
+                                }
+                            }
+                            Label {
+                                visible: backend.displayRadar.length > 1
+                                text: "+" + (backend.displayRadar.length - 1) + " cubos más detectados en el área"
+                                color: "#9ad9ec"; font.pixelSize: 9
+                                Layout.leftMargin: 4
+                            }
+                        }
+                    }
                     RowLayout {
+                        visible: !backend.radarSimpleMode
                         Layout.fillWidth: true
                         spacing: 8
                         Item {

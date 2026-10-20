@@ -38,15 +38,16 @@ Window {
             Slider {objectName: "barHeightSlider"; Layout.fillWidth: true; enabled: !backend.minimalistMode; from: 28; to: 80; stepSize: 2; value: backend.barHeight; onMoved: backend.barHeight = Math.round(value)}
             Label {text: "Vertical spacing · " + backend.barSpacing + " px"; color: "#c0cbdc"}
             Slider {objectName: "barSpacingSlider"; Layout.fillWidth: true; from: 0; to: 20; stepSize: 1; value: backend.barSpacing; onMoved: backend.barSpacing = Math.round(value)}
-            Label {text: "Radar / Mapa 2D (Hidden Cubes, Odyle y Subcategorías)"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
-            CheckBox {objectName: "radarEnabledToggle"; palette.windowText: "#e6edf6"; text: "Activar Mapa/Radar 2D (Tú al centro + puntos interactivos Arriba/Abajo)"; checked: backend.radarEnabled; onToggled: backend.radarEnabled = checked}
-            CheckBox {objectName: "radarChestsToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#f2c15a"; text: "Hidden Cubes (Cubos Ocultos) / Cofres de suministro"; checked: backend.radarChests; onToggled: backend.radarChests = checked}
-            CheckBox {objectName: "radarOdyleToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#6be0ff"; text: "Odyle / Odylium / Cristales de Éter"; checked: backend.radarOdyle; onToggled: backend.radarOdyle = checked}
-            CheckBox {objectName: "radarGemsToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#e082ff"; text: "Gemas (Sapphire Gemstone, Ruby Gemstone, Diamond Gemstone, Tourmaline)"; checked: backend.radarGems; onToggled: backend.radarGems = checked}
-            CheckBox {objectName: "radarOresToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#ff9f5a"; text: "Minerales (Orichalcum Ore)"; checked: backend.radarOres; onToggled: backend.radarOres = checked}
-            CheckBox {objectName: "radarHerbsToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#7be35a"; text: "Hierbas / Plantas (Azpha, Calendula, Pujery, Conide, Ohkra, Morfa, Raydam, Aria, Targena…)"; checked: backend.radarHerbs; onToggled: backend.radarHerbs = checked}
-            CheckBox {objectName: "radarWoodToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#c89b6e"; text: "Madera (Asvata Log, Yggdrasil Log)"; checked: backend.radarWood; onToggled: backend.radarWood = checked}
-            CheckBox {objectName: "radarOtherToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#c0cbdc"; text: "Modo Escáner · Otros objetos del mapa no catalogados"; checked: backend.radarOther; onToggled: backend.radarOther = checked}
+            Label {text: "Radar de Cubos (Hidden Cubes)"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
+            CheckBox {objectName: "radarEnabledToggle"; palette.windowText: "#e6edf6"; text: "Activar Radar de Cubos Ocultos"; checked: backend.radarEnabled; onToggled: backend.radarEnabled = checked}
+            CheckBox {objectName: "radarSimpleModeToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#54cf82"; text: "Modo sencillo (Solo texto/alerta: hay un cubo a X metros, enfrente/atrás/izq/der/arriba/abajo)"; checked: backend.radarSimpleMode; onToggled: backend.radarSimpleMode = checked}
+            CheckBox {objectName: "radarChestsToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#f2c15a"; text: "Rastrear Hidden Cubes"; checked: backend.radarChests; onToggled: backend.radarChests = checked}
+            CheckBox {objectName: "radarOdyleToggle"; visible: false; checked: false; onToggled: backend.radarOdyle = checked}
+            CheckBox {objectName: "radarGemsToggle"; visible: false; checked: false; onToggled: backend.radarGems = checked}
+            CheckBox {objectName: "radarOresToggle"; visible: false; checked: false; onToggled: backend.radarOres = checked}
+            CheckBox {objectName: "radarHerbsToggle"; visible: false; checked: false; onToggled: backend.radarHerbs = checked}
+            CheckBox {objectName: "radarWoodToggle"; visible: false; checked: false; onToggled: backend.radarWood = checked}
+            CheckBox {objectName: "radarOtherToggle"; visible: false; checked: false; onToggled: backend.radarOther = checked}
             Label {text: "Player bar information"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
             Label {text: "Gear score / combat power"; color: "#c0cbdc"}
             ComboBox {
