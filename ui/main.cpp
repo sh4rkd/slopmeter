@@ -102,6 +102,7 @@ class Bridge : public QObject {
     Q_PROPERTY(QVariantList displayPlayers READ displayPlayers NOTIFY detailChanged)
     Q_PROPERTY(QVariantList displayEnemies READ displayEnemies NOTIFY detailChanged)
     Q_PROPERTY(QVariantList detailChoices READ detailChoices NOTIFY detailChanged)
+    Q_PROPERTY(bool pvpEnabled READ pvpEnabled WRITE setPvpEnabled NOTIFY pvpSettingChanged)
     Q_PROPERTY(bool isPvP READ isPvP NOTIFY pvpChanged)
     Q_PROPERTY(QVariantMap pvpSummary READ pvpSummary NOTIFY pvpChanged)
     Q_PROPERTY(bool radarSimpleMode READ radarSimpleMode WRITE setRadarSimpleMode NOTIFY radarChanged)
@@ -405,6 +406,15 @@ public:
     QString sceneLabel;
     QString encounterLabel="Waiting for combat";
     QVariantMap bossState;
+    bool pvpEnabledSetting=QSettings().value("pvp/enabled",true).toBool();
+    bool pvpEnabled() const {return pvpEnabledSetting;}
+    void setPvpEnabled(bool value) {
+        if(pvpEnabledSetting==value) return;
+        pvpEnabledSetting=value;
+        QSettings().setValue("pvp/enabled",value);
+        emit pvpSettingChanged();
+        emit pvpChanged();
+    }
     bool pvpActive=false;
     QVariantMap pvpState;
     QVariantList radarRows;
@@ -415,7 +425,7 @@ public:
     QString encounter() const {return encounterLabel;}
     QString sceneName() const {return sceneLabel;}
     QVariantMap boss() const {return bossState;}
-    bool isPvP() const {return pvpActive;}
+    bool isPvP() const {return pvpEnabledSetting && pvpActive;}
     QVariantMap pvpSummary() const {return pvpState;}
     QVariantList displayRadar() const {
         if(!radarEnabledSetting) return {};
@@ -549,7 +559,7 @@ public:
         auto choices=fightChoices();for(int i=0;i<choices.size();++i) if(choices[i].toMap().value("id").toULongLong()==selectedSession) return i;return 0;
     }
     QVariantList displayPlayers() const {return displayState.value("actors").toList();}
-    QVariantList displayEnemies() const {return displayState.value("enemies").toList();}
+    QVariantList displayEnemies() const {return isPvP() ? displayState.value("enemies").toList() : QVariantList{};}
     QVariantList detailChoices() const {
         QVariantList all=displayPlayers();
         for(const auto &enemy:displayEnemies()) {
@@ -722,7 +732,7 @@ public:
     Q_INVOKABLE void quit() {QCoreApplication::quit();}
 signals:
     void interfacesChanged();
-    void characterNameChanged();void captureChanged();void testModeChanged();void pollingChanged();void historyChanged();void detailChanged();void appearanceChanged();void characterChanged();void statusChanged();void durationChanged();void displayChanged();void encounterChanged();void bossChanged();void pvpChanged();void radarChanged();
+    void characterNameChanged();void captureChanged();void testModeChanged();void pollingChanged();void historyChanged();void detailChanged();void appearanceChanged();void characterChanged();void statusChanged();void durationChanged();void displayChanged();void encounterChanged();void bossChanged();void pvpChanged();void pvpSettingChanged();void radarChanged();
     void radarSelectionChanged();void radarRangeChanged();void radarSubmenuChanged();
 };
 static void global(void *data,wl_registry*,uint32_t,const char *interface,uint32_t) {if(!std::strcmp(interface,"zwlr_layer_shell_v1")) *static_cast<bool*>(data)=true;}

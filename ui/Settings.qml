@@ -48,6 +48,8 @@ Window {
             CheckBox {objectName: "radarHerbsToggle"; visible: false; checked: false; onToggled: backend.radarHerbs = checked}
             CheckBox {objectName: "radarWoodToggle"; visible: false; checked: false; onToggled: backend.radarWood = checked}
             CheckBox {objectName: "radarOtherToggle"; visible: false; checked: false; onToggled: backend.radarOther = checked}
+            Label {text: "PvP Duel / Combate entre Jugadores"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
+            CheckBox {objectName: "pvpEnabledToggle"; palette.windowText: "#e6edf6"; text: "Activar modo PvP (barra de rivales, daño recibido vs infligido y duelo)"; checked: backend.pvpEnabled; onToggled: backend.pvpEnabled = checked}
             Label {text: "Player bar information"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
             Label {text: "Gear score / combat power"; color: "#c0cbdc"}
             ComboBox {
