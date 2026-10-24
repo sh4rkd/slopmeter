@@ -281,7 +281,7 @@ Window {
                         Layout.fillWidth: true
                     }
                     Label {
-                        text: parent.parent.plans.length > 0 ? ("Top " + parent.parent.plans.length + " mejores estrategias de mayor beneficio limpio") : "No hay recetas rentables dentro de este presupuesto"
+                        text: (investmentPlanPanel.plans && investmentPlanPanel.plans.length > 0) ? ("Top " + investmentPlanPanel.plans.length + " mejores estrategias de mayor beneficio limpio") : "No hay recetas rentables dentro de este presupuesto"
                         color: "#9ad9ec"; font.pixelSize: 9
                     }
                 }
@@ -547,6 +547,11 @@ Window {
                             text: recipeCard.expanded ? "▲" : "▼"
                             color: "#8fa1b8"; font.pixelSize: 9
                         }
+
+                        TapHandler {
+                            onTapped: recipeCard.expanded = !recipeCard.expanded
+                        }
+                        HoverHandler { cursorShape: Qt.PointingHandCursor }
                     }
 
                     // Detalle Desplegable de Materiales y Simulador de Volumen
@@ -601,6 +606,7 @@ Window {
 
                         // Sección de Simulación de Volumen / Profundidad de Mercado
                         Rectangle {
+                            id: simSection
                             Layout.fillWidth: true; radius: 4
                             color: "#131a26"; border.width: 1; border.color: "#2a3d54"
                             implicitHeight: simCol.implicitHeight + 14
@@ -620,7 +626,7 @@ Window {
                                         Layout.fillWidth: true
                                     }
                                     Label {
-                                        text: "Lote: " + parent.parent.batchCount + " crafteos"
+                                        text: "Lote: " + simSection.batchCount + " crafteos"
                                         color: "#6cb2eb"; font.pixelSize: 10; font.bold: true
                                     }
                                 }
@@ -642,7 +648,7 @@ Window {
                                             }
                                             // Botón para ajustar el lote exactamente al límite de tu dinero
                                             Rectangle {
-                                                property int optCount: parent.parent.parent.parent.simResult ? Number(parent.parent.parent.parent.simResult.optimalWithBudget || 0) : 0
+                                                property int optCount: simSection.simResult ? Number(simSection.simResult.optimalWithBudget || 0) : 0
                                                 visible: optCount > 0
                                                 implicitWidth: syncBtnLbl.implicitWidth + 10; implicitHeight: 20; radius: 3
                                                 color: "#275936"; border.width: 1; border.color: "#54cf82"
@@ -652,7 +658,7 @@ Window {
                                                     color: "#ffffff"; font.pixelSize: 9; font.bold: true
                                                 }
                                                 TapHandler {
-                                                    onTapped: parent.parent.parent.parent.parent.batchCount = parent.optCount
+                                                    onTapped: simSection.batchCount = parent.optCount
                                                 }
                                                 HoverHandler { cursorShape: Qt.PointingHandCursor }
                                             }
@@ -661,7 +667,7 @@ Window {
                                             Layout.fillWidth: true; spacing: 8
                                             Label {
                                                 text: {
-                                                    const res = parent.parent.parent.parent.simResult
+                                                    const res = simSection.simResult
                                                     if (!res) return ""
                                                     const aff = Number(res.budgetAffordableCount || 0)
                                                     const cost = Number(res.budgetTotalCost || 0)
@@ -688,7 +694,7 @@ Window {
                                         model: [1, 5, 10, 25, 50, 100]
                                         delegate: Rectangle {
                                             required property int modelData
-                                            property bool isSelected: parent.parent.parent.batchCount === modelData
+                                            property bool isSelected: simSection.batchCount === modelData
                                             implicitWidth: 32; implicitHeight: 20; radius: 3
                                             color: isSelected ? "#336699" : "#1e2c3d"
                                             border.width: 1; border.color: isSelected ? "#6cb2eb" : "#32445b"
@@ -699,7 +705,7 @@ Window {
                                                 font.pixelSize: 9; font.bold: parent.isSelected
                                             }
                                             TapHandler {
-                                                onTapped: parent.parent.parent.batchCount = modelData
+                                                onTapped: simSection.batchCount = modelData
                                             }
                                             HoverHandler { cursorShape: Qt.PointingHandCursor }
                                         }
@@ -714,11 +720,11 @@ Window {
                                         spacing: 1
                                         Label { text: "Costo Total Acumulado"; color: "#8fa1b8"; font.pixelSize: 8 }
                                         Label {
-                                            text: parent.parent.parent.parent.simResult ? (craftMarketWindow.formatKinah(parent.parent.parent.parent.simResult.totalCost) + " K") : "-"
+                                            text: simSection.simResult ? (craftMarketWindow.formatKinah(simSection.simResult.cumulativeCost || simSection.simResult.totalCost || 0) + " K") : "-"
                                             color: "#ff9999"; font.pixelSize: 10; font.bold: true
                                         }
                                         Label {
-                                            text: parent.parent.parent.parent.simResult ? ("Prom: " + craftMarketWindow.formatKinah(parent.parent.parent.parent.simResult.avgCostPerCraft) + " K/u") : ""
+                                            text: simSection.simResult ? ("Prom: " + craftMarketWindow.formatKinah(simSection.simResult.avgCostPerCraft || 0) + " K/u") : ""
                                             color: "#b07b82"; font.pixelSize: 8
                                         }
                                     }
@@ -727,11 +733,11 @@ Window {
                                         spacing: 1
                                         Label { text: "Venta Neta (-10% broker)"; color: "#8fa1b8"; font.pixelSize: 8 }
                                         Label {
-                                            text: parent.parent.parent.parent.simResult ? (craftMarketWindow.formatKinah(parent.parent.parent.parent.simResult.totalNetRevenue) + " K") : "-"
+                                            text: simSection.simResult ? (craftMarketWindow.formatKinah(simSection.simResult.totalNetRevenue || 0) + " K") : "-"
                                             color: "#9ad9ec"; font.pixelSize: 10; font.bold: true
                                         }
                                         Label {
-                                            text: parent.parent.parent.parent.simResult ? ("Prom: " + craftMarketWindow.formatKinah(parent.parent.parent.parent.simResult.avgNetRevenuePerCraft) + " K/u") : ""
+                                            text: simSection.simResult ? ("Prom: " + craftMarketWindow.formatKinah(simSection.simResult.avgNetRevenuePerCraft || 0) + " K/u") : ""
                                             color: "#7292a8"; font.pixelSize: 8
                                         }
                                     }
@@ -741,14 +747,14 @@ Window {
                                         Label { text: "Beneficio Neto Total"; color: "#8fa1b8"; font.pixelSize: 8 }
                                         Label {
                                             text: {
-                                                const res = parent.parent.parent.parent.simResult
+                                                const res = simSection.simResult
                                                 if (!res) return "-"
                                                 const p = Number(res.totalProfit || 0)
                                                 const roi = Number(res.totalRoi || 0).toFixed(0)
                                                 return (p > 0 ? "+" : "") + craftMarketWindow.formatKinah(p) + " K (" + (p > 0 ? "+" : "") + roi + "%)"
                                             }
                                             color: {
-                                                const res = parent.parent.parent.parent.simResult
+                                                const res = simSection.simResult
                                                 if (!res) return "#c0cbdc"
                                                 return Number(res.totalProfit || 0) > 0 ? "#54cf82" : "#ff8080"
                                             }
@@ -761,13 +767,13 @@ Window {
                                 Rectangle {
                                     Layout.fillWidth: true; implicitHeight: 22; radius: 3
                                     color: {
-                                        const res = parent.parent.simResult
+                                        const res = simSection.simResult
                                         if (!res) return "#1e2836"
                                         return Number(res.maxProfitableBatch || 0) > 0 ? "#183624" : "#3b1e22"
                                     }
                                     border.width: 1
                                     border.color: {
-                                        const res = parent.parent.simResult
+                                        const res = simSection.simResult
                                         if (!res) return "#2c3b4d"
                                         return Number(res.maxProfitableBatch || 0) > 0 ? "#2d6b45" : "#6e2930"
                                     }
@@ -776,7 +782,7 @@ Window {
                                         anchors.fill: parent; anchors.leftMargin: 6; anchors.rightMargin: 6; spacing: 4
                                         Label {
                                             text: {
-                                                const res = parent.parent.parent.simResult
+                                                const res = simSection.simResult
                                                 if (!res) return "Calculando rentabilidad..."
                                                 const maxB = Number(res.maxProfitableBatch || 0)
                                                 if (maxB <= 0) return "⚠️ No rentable desde la 1ª unidad con los precios actuales."
@@ -784,7 +790,7 @@ Window {
                                                 return "⚡ Límite Seguro: Rentable hasta " + maxB + " unidades seguidas (después suben los materiales y genera pérdidas)."
                                             }
                                             color: {
-                                                const res = parent.parent.parent.simResult
+                                                const res = simSection.simResult
                                                 if (!res) return "#8fa1b8"
                                                 return Number(res.maxProfitableBatch || 0) > 0 ? "#6ee69e" : "#ff9e9e"
                                             }
@@ -796,10 +802,6 @@ Window {
                             }
                         }
                     }
-                }
-
-                TapHandler {
-                    onTapped: recipeCard.expanded = !recipeCard.expanded
                 }
             }
         }
