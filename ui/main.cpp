@@ -109,6 +109,7 @@ class Bridge : public QObject {
     Q_PROPERTY(bool isPvP READ isPvP NOTIFY pvpChanged)
     Q_PROPERTY(QVariantMap pvpSummary READ pvpSummary NOTIFY pvpChanged)
     Q_PROPERTY(bool radarSimpleMode READ radarSimpleMode WRITE setRadarSimpleMode NOTIFY radarChanged)
+    Q_PROPERTY(bool radarSound READ radarSound WRITE setRadarSound NOTIFY radarChanged)
     Q_PROPERTY(bool radarEnabled READ radarEnabled WRITE setRadarEnabled NOTIFY radarChanged)
     Q_PROPERTY(bool radarChests READ radarChests WRITE setRadarChests NOTIFY radarChanged)
     Q_PROPERTY(bool radarOdyle READ radarOdyle WRITE setRadarOdyle NOTIFY radarChanged)
@@ -199,6 +200,9 @@ public:
     bool radarOtherSetting=QSettings().value("radar/other",false).toBool();
     QString radarItemFilterSetting=QSettings().value("radar/itemFilter",QString()).toString();
     bool radarSimpleModeSetting=QSettings().value("radar/simpleMode",false).toBool();
+    bool radarSoundSetting=QSettings().value("radar/sound",true).toBool();
+    bool radarSound() const {return radarSoundSetting;}
+    void setRadarSound(bool value) {if(radarSoundSetting==value) return;radarSoundSetting=value;QSettings().setValue("radar/sound",value);emit radarChanged();}
     bool radarSimpleMode() const {return radarSimpleModeSetting;}
     void setRadarSimpleMode(bool value) {if(radarSimpleModeSetting==value) return;radarSimpleModeSetting=value;QSettings().setValue("radar/simpleMode",value);emit radarChanged();}
     bool radarEnabled() const {return radarEnabledSetting;}
@@ -441,9 +445,10 @@ public:
         emit eventAlertsChanged();
     }
     Q_INVOKABLE void playAlertSound(const QString &soundType="event") {
-        QString soundPath = (soundType=="boss") ? ":/sounds/boss_alert.wav" : ":/sounds/event_alert.wav";
+        const QString kind = (soundType=="boss"||soundType=="cube") ? soundType : QStringLiteral("event");
+        QString soundPath = ":/sounds/" + kind + "_alert.wav";
         // Extract resource to temporary file if playing with external player
-        QString tempWav = QDir::tempPath() + (soundType=="boss" ? "/slopmeter_boss.wav" : "/slopmeter_event.wav");
+        QString tempWav = QDir::tempPath() + "/slopmeter_" + kind + ".wav";
         if (!QFile::exists(tempWav)) {
             QFile res(soundPath);
             if (res.open(QIODevice::ReadOnly)) {
@@ -455,8 +460,10 @@ public:
                 res.close();
             }
         }
-        // Play asynchronously
-        QProcess::startDetached("canberra-gtk-play", {"-f", tempWav});
+        // Play asynchronously (fall back to PulseAudio/ALSA players if libcanberra is missing)
+        if (!QProcess::startDetached("canberra-gtk-play", {"-f", tempWav}))
+            if (!QProcess::startDetached("paplay", {tempWav}))
+                QProcess::startDetached("aplay", {"-q", tempWav});
     }
     Q_INVOKABLE void dismissEventAlert() {
         currentActiveAlert.clear();
@@ -619,7 +626,90 @@ public:
     QMap<int, double> marketPrices; // item_key -> unit price in Kinah
     QMap<int, int> marketListings; // item_key -> active listings count
     QVariantList cachedRecipes;
+    QMap<int, QVariantMap> recipeByResultId;
     bool recipesLoaded=false;
+
+    static double getVendorPrice(int id) {
+        switch (id) {
+            // Cooking merchant items (Sanctum/Pandaemonium)
+            case 630554002: return 60.0;   // Sal
+            case 630554003: return 100.0;  // Aceite de Ulmus
+            case 630554004: return 80.0;   // Salsa de soja
+            case 630554005: return 90.0;   // Pimienta Verteron
+            case 630554006: return 100.0;  // Curry en polvo
+            case 630554007: return 120.0;  // Mantequilla Abex
+            case 630554008: return 150.0;  // Fideos Triora crudos
+            case 630554009: return 130.0;  // Queso
+            case 630554011: return 90.0;   // Pimienta Altgard
+
+            // Workshop additives & reagents
+            case 630541001: return 250.0;  // Disolvente de oricalco
+            case 630542001: return 150.0;  // Abrasivo
+            case 630542005: return 120.0;  // Papel de lija
+            case 630543001: return 100.0;  // Botella de vidrio
+            case 630543002: return 250.0;  // Botella de vidrio profesional
+            case 630543005: return 350.0;  // Catalizador
+            case 630543008: return 250.0;  // Tinta profesional
+            case 630543013: return 500.0;  // Tinta excepcional
+
+            // Draconic craft supplies & softeners
+            case 630520001: return 500.0;   // Martillo de circón
+            case 630520002: return 1200.0;  // Martillo de lázuli
+            case 630520003: return 2500.0;  // Martillo de piedra lunar
+            case 630520004: return 500.0;   // Suavizante menor
+            case 630520005: return 1200.0;  // Suavizante intermedio
+            case 630520006: return 2500.0;  // Suavizante superior
+            case 630520007: return 500.0;   // Endurecedor menor
+            case 630520008: return 1200.0;  // Endurecedor intermedio
+            case 630520009: return 2500.0;  // Endurecedor superior
+            default: return 0.0;
+        }
+    }
+
+    double resolveMaterialPrice(int matId, int &outListings, bool &outIsVendorOrCrafted, int depth = 0) const {
+        if (depth > 6) return 0.0;
+        // 1. Direct market price (active listing or recent sale)
+        double mp = marketPrices.value(matId, 0.0);
+        if (mp > 0) {
+            outListings = marketListings.value(matId, 0);
+            outIsVendorOrCrafted = false;
+            return mp;
+        }
+        // 2. Fixed NPC merchant price
+        double vp = getVendorPrice(matId);
+        if (vp > 0) {
+            outListings = 0;
+            outIsVendorOrCrafted = true;
+            return vp;
+        }
+        // 3. Intermediate craft recipe
+        if (recipeByResultId.contains(matId)) {
+            const auto subRecipe = recipeByResultId.value(matId);
+            const auto subMats = subRecipe.value("materials").toList();
+            int subCount = qMax(1, subRecipe.value("result").toMap().value("count").toInt());
+            double subTotal = 0.0;
+            bool anyFailed = false;
+            for (const auto &smVal : subMats) {
+                const auto sm = smVal.toMap();
+                int smId = sm.value("id").toInt();
+                int smCount = qMax(1, sm.value("count").toInt());
+                int dummyListings = 0;
+                bool dummyVendor = false;
+                double smPrice = resolveMaterialPrice(smId, dummyListings, dummyVendor, depth + 1);
+                if (smPrice <= 0) {
+                    anyFailed = true;
+                    break;
+                }
+                subTotal += smPrice * smCount;
+            }
+            if (!anyFailed && subTotal > 0) {
+                outListings = 0;
+                outIsVendorOrCrafted = true;
+                return subTotal / subCount;
+            }
+        }
+        return 0.0;
+    }
 
     double marketTaxRate() const {return marketTaxRateSetting;}
     void setMarketTaxRate(double val) {
@@ -669,6 +759,13 @@ public:
             auto doc = QJsonDocument::fromJson(file.readAll());
             if (doc.isArray()) {
                 cachedRecipes = doc.array().toVariantList();
+                for (const auto &rVal : cachedRecipes) {
+                    auto r = rVal.toMap();
+                    int resId = r.value("result").toMap().value("id").toInt();
+                    if (resId > 0 && !recipeByResultId.contains(resId)) {
+                        recipeByResultId[resId] = r;
+                    }
+                }
                 recipesLoaded = true;
             }
         }
@@ -772,7 +869,7 @@ public:
             double sellPrice = marketPrices.value(resultId, 0.0);
             int resultListings = marketListings.value(resultId, 0);
 
-            // Compute material costs
+            // Compute material costs using recursive resolution (market + NPC vendor + intermediate crafts)
             auto mats = r.value("materials").toList();
             double totalCost = 0.0;
             bool missingAnyPrice = false;
@@ -781,28 +878,61 @@ public:
                 auto m = mVal.toMap();
                 int mId = m.value("id").toInt();
                 int mCount = qMax(1, m.value("count").toInt());
-                double unitPrice = marketPrices.value(mId, 0.0);
-                int matListings = marketListings.value(mId, 0);
+                int matListings = 0;
+                bool isVendorOrCrafted = false;
+                double unitPrice = resolveMaterialPrice(mId, matListings, isVendorOrCrafted);
                 if (unitPrice <= 0) missingAnyPrice = true;
                 double matCost = unitPrice * mCount;
                 totalCost += matCost;
                 m["unitPrice"] = unitPrice;
                 m["totalCost"] = matCost;
                 m["listings"] = matListings;
+                m["isVendorOrCrafted"] = isVendorOrCrafted;
+                m["hasActiveStock"] = (matListings > 0);
                 enrichedMats.append(m);
+            }
+
+            // Splendent / Proc (Combo Chance) Expected Value
+            double baseSellPrice = sellPrice;
+            double effectiveSellPrice = sellPrice;
+            bool hasCombo = false;
+            double comboRate = 0.0;
+            double chancePrice = 0.0;
+            QString chanceName;
+
+            auto chances = r.value("chances").toList();
+            if (!chances.isEmpty()) {
+                auto chanceObj = chances.first().toMap();
+                int chanceId = chanceObj.value("id").toInt();
+                double cRate = chanceObj.contains("rate") ? chanceObj.value("rate").toDouble() : 25.0;
+                double cPrice = marketPrices.value(chanceId, 0.0);
+                if (cPrice > 0 && baseSellPrice > 0) {
+                    hasCombo = true;
+                    comboRate = cRate / 100.0;
+                    chancePrice = cPrice;
+                    chanceName = chanceObj.value("name").toString();
+                    effectiveSellPrice = (1.0 - comboRate) * baseSellPrice + comboRate * chancePrice;
+                }
             }
 
             // Broker tax in Aion 2 (Default is 10.0%, configurable by user)
             double taxMultiplier = 1.0 - (marketTaxRateSetting / 100.0);
             if (taxMultiplier < 0) taxMultiplier = 0;
-            double netRevenue = sellPrice * resultCount * taxMultiplier;
+            double netRevenue = effectiveSellPrice * resultCount * taxMultiplier;
             double profit = netRevenue - totalCost;
             double roiPct = totalCost > 0 ? (profit / totalCost * 100.0) : 0.0;
 
             res["listings"] = resultListings;
+            res["hasActiveStock"] = (resultListings > 0);
             r["result"] = res;
             r["materials"] = enrichedMats;
             r["sellPrice"] = std::round(sellPrice);
+            r["effectiveSellPrice"] = std::round(effectiveSellPrice);
+            r["baseSellPrice"] = std::round(baseSellPrice);
+            r["hasCombo"] = hasCombo;
+            r["comboRatePct"] = std::round(comboRate * 100.0);
+            r["chancePrice"] = std::round(chancePrice);
+            r["chanceName"] = chanceName;
             r["totalCost"] = std::round(totalCost);
             r["profit"] = std::round(profit);
             r["roiPct"] = std::round(roiPct * 10.0) / 10.0;
@@ -817,10 +947,10 @@ public:
     Q_INVOKABLE QVariantMap simulateBatchCraft(const QVariantMap &recipe, int batchCount, double customBudget = 0.0) {
         auto res = recipe.value("result").toMap();
         int resultCountPerCraft = qMax(1, res.value("count").toInt());
-        double baseSellPrice = recipe.value("sellPrice").toDouble();
+        double baseSellPrice = recipe.value("effectiveSellPrice").toDouble();
+        if (baseSellPrice <= 0) baseSellPrice = recipe.value("sellPrice").toDouble();
         int prodListings = recipe.value("resultListings").toInt();
         if (prodListings <= 0) prodListings = res.value("listings").toInt();
-        if (prodListings <= 0) prodListings = 5;
 
         auto mats = recipe.value("materials").toList();
 
@@ -847,18 +977,32 @@ public:
                 double baseMatPrice = m.value("unitPrice").toDouble();
                 int countPerCraft = qMax(1, m.value("count").toInt());
                 int matListings = m.value("listings").toInt();
-                if (matListings <= 0) matListings = 5;
+                bool isVendorOrCrafted = m.value("isVendorOrCrafted").toBool();
 
-                // Model order-book depth escalation:
-                // Surge factor increases as more lots are consumed.
-                double surgeFactor = 1.0 + (static_cast<double>(i - 1) / static_cast<double>(matListings)) * 0.15;
-                if (surgeFactor > 5.0) surgeFactor = 5.0; // Cap surge at 500%
+                double surgeFactor = 1.0;
+                if (!isVendorOrCrafted && matListings > 0) {
+                    // Realistic order book depletion curve based on active lots
+                    surgeFactor = 1.0 + (static_cast<double>(i - 1) / static_cast<double>(matListings)) * 0.08;
+                    if (surgeFactor > 4.0) surgeFactor = 4.0;
+                } else if (!isVendorOrCrafted && matListings == 0) {
+                    // Historical price without active lots: mild realistic escalation
+                    surgeFactor = 1.0 + (static_cast<double>(i - 1) * 0.015);
+                    if (surgeFactor > 2.0) surgeFactor = 2.0;
+                }
+                // Vendor & intermediate crafts don't artificially surge
                 unitCraftCost += (baseMatPrice * surgeFactor) * countPerCraft;
             }
 
             // Sale revenue of unit i
-            double decayFactor = 1.0 - (static_cast<double>(i - 1) / static_cast<double>(prodListings)) * 0.08;
-            if (decayFactor < 0.4) decayFactor = 0.4; // Cap decay at floor 40% of base price
+            double decayFactor = 1.0;
+            if (prodListings > 0) {
+                decayFactor = 1.0 - (static_cast<double>(i - 1) / static_cast<double>(qMax(15, prodListings))) * 0.05;
+                if (decayFactor < 0.5) decayFactor = 0.5;
+            } else {
+                // Low/no active competition on broker
+                decayFactor = 1.0 - (static_cast<double>(i - 1) * 0.02);
+                if (decayFactor < 0.6) decayFactor = 0.6;
+            }
             double unitGrossRevenue = (baseSellPrice * decayFactor) * resultCountPerCraft;
             double unitNetRevenue = unitGrossRevenue * taxMultiplier;
 
@@ -933,6 +1077,85 @@ public:
             {"optimalWithBudget", optimalWithBudget}
         };
     }
+
+    Q_INVOKABLE QVariantList recommendInvestmentPlan(double budget, int maxRecommendations = 5) {
+        if (budget <= 0.0) return {};
+        const auto allRecipes = craftRecipes();
+        QVariantList candidates;
+
+        for (const auto &rVal : allRecipes) {
+            auto r = rVal.toMap();
+            if (!r.value("hasPrices").toBool()) continue;
+            double unitCost = r.value("totalCost").toDouble();
+            if (unitCost <= 0 || unitCost > budget) continue;
+
+            int maxAffordableEstimate = qBound(1, static_cast<int>(budget / unitCost), 150);
+            auto sim = simulateBatchCraft(r, maxAffordableEstimate, budget);
+            int affordable = sim.value("budgetAffordableCount").toInt();
+            double profit = sim.value("budgetProfit").toDouble();
+            double totalCost = sim.value("budgetTotalCost").toDouble();
+            double netRevenue = sim.value("budgetNetRevenue").toDouble();
+            double roi = sim.value("budgetRoi").toDouble();
+
+            if (affordable <= 0 || profit <= 0 || totalCost <= 0) continue;
+
+            // Generate detailed shopping list for this exact batch count
+            auto mats = r.value("materials").toList();
+            QVariantList shoppingList;
+            for (const auto &mVal : mats) {
+                auto m = mVal.toMap();
+                int countPerCraft = qMax(1, m.value("count").toInt());
+                int totalUnitsNeeded = countPerCraft * affordable;
+                double unitPrice = m.value("unitPrice").toDouble();
+                double matCost = unitPrice * totalUnitsNeeded;
+                int lots = m.value("listings").toInt();
+                bool isVendorOrCrafted = m.value("isVendorOrCrafted").toBool();
+
+                QVariantMap item;
+                item["id"] = m.value("id").toInt();
+                item["name"] = m.value("name").toString();
+                item["countPerCraft"] = countPerCraft;
+                item["totalNeeded"] = totalUnitsNeeded;
+                item["unitPrice"] = std::round(unitPrice);
+                item["totalCost"] = std::round(matCost);
+                item["listings"] = lots;
+                item["isVendorOrCrafted"] = isVendorOrCrafted;
+                shoppingList.append(item);
+            }
+
+            auto res = r.value("result").toMap();
+            int totalResultsExpected = qMax(1, res.value("count").toInt()) * affordable;
+
+            QVariantMap plan;
+            plan["recipeId"] = r.value("id").toInt();
+            plan["name"] = r.value("name").toString();
+            plan["categoryName"] = r.value("categoryName").toString();
+            plan["resultName"] = res.value("name").toString();
+            plan["resultIcon"] = res.value("icon").toString();
+            plan["batchCount"] = affordable;
+            plan["totalResultsExpected"] = totalResultsExpected;
+            plan["totalInvestment"] = std::round(totalCost);
+            plan["expectedRevenue"] = std::round(netRevenue);
+            plan["netProfit"] = std::round(profit);
+            plan["roiPct"] = std::round(roi * 10.0) / 10.0;
+            plan["hasCombo"] = r.value("hasCombo").toBool();
+            plan["comboRatePct"] = r.value("comboRatePct").toInt();
+            plan["chanceName"] = r.value("chanceName").toString();
+            plan["chancePrice"] = r.value("chancePrice").toDouble();
+            plan["shoppingList"] = shoppingList;
+
+            candidates.append(plan);
+        }
+
+        std::sort(candidates.begin(), candidates.end(), [](const QVariant &a, const QVariant &b) {
+            return a.toMap().value("netProfit").toDouble() > b.toMap().value("netProfit").toDouble();
+        });
+
+        if (candidates.size() > maxRecommendations) {
+            candidates = candidates.mid(0, maxRecommendations);
+        }
+        return candidates;
+    }
     QQuickWindow *window=nullptr;
     bool headless=false;
     QPoint dragOrigin;
@@ -962,6 +1185,27 @@ public:
     QVariantMap boss() const {return bossState;}
     bool isPvP() const {return pvpEnabledSetting && pvpActive;}
     QVariantMap pvpSummary() const {return pvpState;}
+    // Plays the cube chime once per newly detected cube (entity id), throttled to one
+    // chime every 2 s so a burst of spawns on zone entry does not spam audio.
+    QSet<qint64> announcedCubes;
+    QDateTime lastCubeSound;
+    void notifyNewCubes() {
+        QSet<qint64> current;
+        bool fresh=false;
+        for(const auto &val:displayRadar()) {
+            const auto m=val.toMap();
+            if(m.value("category").toString()!="chest") continue;
+            const qint64 id=m.value("id").toLongLong();
+            current.insert(id);
+            if(!announcedCubes.contains(id)) fresh=true;
+        }
+        announcedCubes=current;
+        if(!fresh||!radarSoundSetting) return;
+        const auto now=QDateTime::currentDateTime();
+        if(lastCubeSound.isValid()&&lastCubeSound.msecsTo(now)<2000) return;
+        lastCubeSound=now;
+        playAlertSound("cube");
+    }
     QVariantList displayRadar() const {
         if(!radarEnabledSetting) return {};
         QVariantList filtered;
@@ -1187,7 +1431,7 @@ public:
         const auto nextPvpSummary=displayState.value("pvpSummary").toMap();
         if(nextPvp!=pvpActive||nextPvpSummary!=pvpState) {pvpActive=nextPvp;pvpState=nextPvpSummary;emit pvpChanged();}
         const auto nextRadar=(!previewEnabled&&!selectedSession?currentState:displayState).value("radar").toList();
-        if(nextRadar!=radarRows) {radarRows=nextRadar;emit radarChanged();}
+        if(nextRadar!=radarRows) {radarRows=nextRadar;emit radarChanged();notifyNewCubes();}
         actors.update(QJsonArray::fromVariantList(displayPlayers()));
         enemies.update(QJsonArray::fromVariantList(displayEnemies()));
         updateDetail();

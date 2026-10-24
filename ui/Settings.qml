@@ -77,6 +77,11 @@ Window {
             Label {text: "Radar de Cubos (Hidden Cubes)"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
             CheckBox {objectName: "radarEnabledToggle"; palette.windowText: "#e6edf6"; text: "Activar Radar de Cubos Ocultos"; checked: backend.radarEnabled; onToggled: backend.radarEnabled = checked}
             CheckBox {objectName: "radarSimpleModeToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#54cf82"; text: "Modo sencillo (Solo texto/alerta: hay un cubo a X metros, enfrente/atrás/izq/der/arriba/abajo)"; checked: backend.radarSimpleMode; onToggled: backend.radarSimpleMode = checked}
+            RowLayout {
+                Layout.leftMargin: 20; visible: backend.radarEnabled
+                CheckBox {objectName: "radarSoundToggle"; palette.windowText: "#f2c15a"; text: "Sonido al detectar un cubo nuevo"; checked: backend.radarSound; onToggled: backend.radarSound = checked}
+                Button {text: "Probar"; onClicked: backend.playAlertSound("cube")}
+            }
             CheckBox {objectName: "radarChestsToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#f2c15a"; text: "Rastrear Hidden Cubes"; checked: backend.radarChests; onToggled: backend.radarChests = checked}
             CheckBox {objectName: "radarOdyleToggle"; visible: false; checked: false; onToggled: backend.radarOdyle = checked}
             CheckBox {objectName: "radarGemsToggle"; visible: false; checked: false; onToggled: backend.radarGems = checked}

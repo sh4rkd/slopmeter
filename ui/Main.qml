@@ -349,6 +349,91 @@ Window {
                             }
                         }
                     }
+                    // Flecha de navegación: apunta hacia donde caminar con el personaje.
+                    // 0° = sigue recto (relativo a tu dirección de marcha), se calibra al caminar ~2 m.
+                    Rectangle {
+                        id: radarNavPanel
+                        objectName: "radarNavPanel"
+                        property var target: radarSection.selectedTarget()
+                        property bool hasT: radarSection.hasTarget(target)
+                        property bool relative: hasT && target.hasHeading === true
+                        property real navAngle: hasT ? Number(relative ? target.relAngle : target.angle) || 0 : 0
+                        property real dist: hasT ? Number(target.distance || 0) : 0
+                        visible: hasT
+                        Layout.fillWidth: true
+                        implicitHeight: 96
+                        radius: 6
+                        color: backend.minimalistMode ? Qt.rgba(16/255, 30/255, 24/255, 0.88) : "#122219"
+                        border.width: 1.5
+                        border.color: dist <= 5 ? "#f2c15a" : (hasT && target.trend > 0 ? "#54cf82" : (hasT && target.trend < 0 ? "#ff6b6b" : "#3d6b55"))
+                        function turnText() {
+                            if (!hasT) return ""
+                            if (dist <= 5) return "¡ESTÁS ENCIMA DEL CUBO!"
+                            if (!relative) return "Camina unos pasos para calibrar"
+                            const a = navAngle
+                            if (Math.abs(a) <= 20) return "SIGUE RECTO"
+                            if (Math.abs(a) >= 150) return "DA LA VUELTA"
+                            if (a > 0) return a < 60 ? "LIGERO A LA DERECHA" : "GIRA A LA DERECHA"
+                            return a > -60 ? "LIGERO A LA IZQUIERDA" : "GIRA A LA IZQUIERDA"
+                        }
+                        RowLayout {
+                            anchors.fill: parent; anchors.margins: 8; spacing: 10
+                            Item {
+                                Layout.preferredWidth: 78; Layout.preferredHeight: 78
+                                Rectangle {
+                                    anchors.fill: parent; radius: width / 2
+                                    color: "transparent"; border.width: 1; border.color: "#2a4a3a"
+                                }
+                                Image {
+                                    id: navArrow
+                                    objectName: "radarNavArrow"
+                                    anchors.centerIn: parent
+                                    width: 64; height: 64
+                                    sourceSize.width: 128; sourceSize.height: 128
+                                    source: "icons/arrow.svg"
+                                    smooth: true
+                                    rotation: radarNavPanel.navAngle
+                                    // RotationAnimation toma el camino más corto (no da la vuelta de 179° a -179°)
+                                    Behavior on rotation { RotationAnimation { duration: 350; direction: RotationAnimation.Shortest } }
+                                }
+                            }
+                            ColumnLayout {
+                                Layout.fillWidth: true; spacing: 2
+                                Label {
+                                    objectName: "radarNavTurn"
+                                    text: radarNavPanel.turnText()
+                                    color: "#ffffff"; font.pixelSize: 13; font.bold: true
+                                    Layout.fillWidth: true; elide: Text.ElideRight
+                                }
+                                Label {
+                                    text: radarNavPanel.hasT ? (Number(radarNavPanel.dist).toFixed(0) + " m") : ""
+                                    color: "#f2c15a"; font.pixelSize: 20; font.bold: true
+                                }
+                                Label {
+                                    text: {
+                                        const t = radarNavPanel.target
+                                        if (!radarNavPanel.hasT) return ""
+                                        const v = backend.radarVertBadge(t.vertDir, t.zDelta)
+                                        const tr = t.trend > 0 ? "  ·  acercándote" : (t.trend < 0 ? "  ·  te alejas" : "")
+                                        return v + tr
+                                    }
+                                    color: {
+                                        const t = radarNavPanel.target
+                                        if (!radarNavPanel.hasT) return "#c0cbdc"
+                                        return t.trend > 0 ? "#54cf82" : (t.trend < 0 ? "#ff8e8e" : "#c0cbdc")
+                                    }
+                                    font.pixelSize: 10; font.bold: true
+                                    Layout.fillWidth: true; elide: Text.ElideRight
+                                }
+                                Label {
+                                    visible: radarNavPanel.hasT && !radarNavPanel.relative
+                                    text: "Mientras tanto la flecha indica el Norte del mapa (" + (radarNavPanel.hasT ? radarNavPanel.target.horizDir : "") + ")"
+                                    color: "#7e8ea6"; font.pixelSize: 8
+                                    Layout.fillWidth: true; elide: Text.ElideRight
+                                }
+                            }
+                        }
+                    }
                     // Modo Sencillo de Radar: Notificación directa con alerta, dirección y distancia
                     Rectangle {
                         id: radarSimpleContainer
@@ -388,27 +473,37 @@ Window {
                             }
                             Rectangle {
                                 visible: backend.displayRadar.length > 0
-                                Layout.fillWidth: true; implicitHeight: 24; radius: 3
-                                color: "#1b3329"
+                                Layout.fillWidth: true; implicitHeight: 36; radius: 4
+                                color: "#162820"
                                 border.width: 1; border.color: "#3d6b55"
                                 RowLayout {
-                                    anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8; spacing: 6
-                                    Label {
-                                        objectName: "radarSimpleDirection"
-                                        text: {
-                                            const t = radarSection.selectedTarget()
-                                            if (!radarSection.hasTarget(t)) return ""
-                                            const h = (t.horizDir || "Frente").toUpperCase()
-                                            const v = (t.vertDir || "Nivel").toUpperCase()
-                                            const arrow = backend.radarHorizArrow(t.horizDir)
-                                            let vText = ""
-                                            if (t.vertDir === "Arriba") vText = "▲ ARRIBA"
-                                            else if (t.vertDir === "Abajo") vText = "▼ ABAJO"
-                                            else vText = "• MISMO NIVEL"
-                                            return arrow + "  |  " + vText + "  |  A " + Number(t.distance || 0).toFixed(0) + " METROS"
+                                    anchors.fill: parent; anchors.leftMargin: 8; anchors.rightMargin: 8; spacing: 8
+                                    ColumnLayout {
+                                        Layout.fillWidth: true; spacing: 1
+                                        Label {
+                                            objectName: "radarSimpleDirection"
+                                            text: {
+                                                const t = radarSection.selectedTarget()
+                                                if (!radarSection.hasTarget(t)) return ""
+                                                const arrow = backend.radarHorizArrow(t.horizDir)
+                                                let vText = ""
+                                                if (t.vertDir === "Arriba") vText = "▲ ARRIBA"
+                                                else if (t.vertDir === "Abajo") vText = "▼ ABAJO"
+                                                else vText = "• MISMO NIVEL"
+                                                return arrow + "  |  " + vText + "  |  A " + Number(t.distance || 0).toFixed(0) + " METROS"
+                                            }
+                                            color: "#ffffff"; font.pixelSize: 10; font.bold: true
+                                            Layout.fillWidth: true; elide: Text.ElideRight
                                         }
-                                        color: "#ffffff"; font.pixelSize: 10; font.bold: true
-                                        Layout.fillWidth: true; elide: Text.ElideRight
+                                        Label {
+                                            text: {
+                                                const t = radarSection.selectedTarget()
+                                                if (!radarSection.hasTarget(t)) return ""
+                                                return "Rumbo brújula: " + Math.round(Number(t.angle || 0)) + "° (" + (t.horizDir || "Norte") + ")"
+                                            }
+                                            color: "#54cf82"; font.pixelSize: 9
+                                            Layout.fillWidth: true; elide: Text.ElideRight
+                                        }
                                     }
                                 }
                             }
@@ -533,7 +628,7 @@ Window {
                                     id: selectedCol
                                     anchors.fill: parent; anchors.margins: 5; spacing: 2
                                     RowLayout {
-                                        Layout.fillWidth: true; spacing: 4
+                                        Layout.fillWidth: true; spacing: 6
                                         Label {
                                             objectName: "radarSelectedName"
                                             text: {

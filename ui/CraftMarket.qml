@@ -155,6 +155,26 @@ Window {
                 ToolTip.visible: budgetHover.hovered; ToolTip.text: "Ingresa tu Kinah disponible para comprar ingredientes (ej. '10M' o '500k'). Slopmeter calculará cuánto puedes craftear y el beneficio máximo con tu dinero."
                 HoverHandler { id: budgetHover }
             }
+            RowLayout {
+                spacing: 2
+                Repeater {
+                    model: ["500K", "1M", "5M", "10M"]
+                    delegate: Rectangle {
+                        required property string modelData
+                        implicitWidth: 34; implicitHeight: 22; radius: 3
+                        color: "#1e2c3d"; border.width: 1; border.color: "#354a63"
+                        Label {
+                            anchors.centerIn: parent
+                            text: modelData
+                            color: "#9ad9ec"; font.pixelSize: 8; font.bold: true
+                        }
+                        TapHandler {
+                            onTapped: budgetField.text = modelData
+                        }
+                        HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    }
+                }
+            }
             CheckBox {
                 text: "Solo Rentables"
                 checked: craftMarketWindow.onlyProfitable
@@ -234,6 +254,108 @@ Window {
                             onTapped: craftMarketWindow.categoryFilter = modelData
                         }
                         HoverHandler { cursorShape: Qt.PointingHandCursor }
+                    }
+                }
+            }
+        }
+
+        // Panel Destacado de Plan de Inversión Inteligente (Aparece al fijar tu Kinah)
+        Rectangle {
+            id: investmentPlanPanel
+            visible: craftMarketWindow.availableBudget > 0
+            Layout.fillWidth: true; radius: 4
+            color: "#12241b"; border.width: 1; border.color: "#54cf82"
+            implicitHeight: planCol.implicitHeight + 14
+
+            property var plans: (craftMarketWindow.availableBudget > 0) ? backend.recommendInvestmentPlan(craftMarketWindow.availableBudget, 3) : []
+
+            ColumnLayout {
+                id: planCol
+                anchors.fill: parent; anchors.margins: 8; spacing: 6
+
+                RowLayout {
+                    Layout.fillWidth: true; spacing: 6
+                    Label {
+                        text: "💡 PLAN DE INVERSIÓN RECOMENDADO CON TU KINAH (" + craftMarketWindow.formatKinah(craftMarketWindow.availableBudget) + " K DISPONIBLES):"
+                        color: "#54cf82"; font.pixelSize: 10; font.bold: true
+                        Layout.fillWidth: true
+                    }
+                    Label {
+                        text: parent.parent.plans.length > 0 ? ("Top " + parent.parent.plans.length + " mejores estrategias de mayor beneficio limpio") : "No hay recetas rentables dentro de este presupuesto"
+                        color: "#9ad9ec"; font.pixelSize: 9
+                    }
+                }
+
+                Repeater {
+                    model: investmentPlanPanel.plans
+                    delegate: Rectangle {
+                        required property var modelData
+                        required property int index
+                        Layout.fillWidth: true; radius: 4
+                        color: "#172b22"; border.width: 1; border.color: index === 0 ? "#f1c778" : "#2f5c43"
+                        implicitHeight: itemCol.implicitHeight + 12
+
+                        ColumnLayout {
+                            id: itemCol
+                            anchors.fill: parent; anchors.margins: 6; spacing: 4
+
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: 6
+                                Rectangle {
+                                    implicitWidth: rankLbl.implicitWidth + 8; implicitHeight: 18; radius: 3
+                                    color: index === 0 ? "#f1c778" : "#2f5c43"
+                                    Label {
+                                        id: rankLbl; anchors.centerIn: parent
+                                        text: (index === 0 ? "🥇 TOP 1" : index === 1 ? "🥈 TOP 2" : "🥉 TOP 3")
+                                        color: index === 0 ? "#14251d" : "#ffffff"
+                                        font.pixelSize: 8; font.bold: true
+                                    }
+                                }
+                                Label {
+                                    text: "Fabricar " + modelData.batchCount + " lotes de " + modelData.name
+                                    color: "#ffffff"; font.pixelSize: 10; font.bold: true
+                                    Layout.fillWidth: true; elide: Text.ElideRight
+                                }
+                                Label {
+                                    text: "Invertir: " + craftMarketWindow.formatKinah(modelData.totalInvestment) + " K"
+                                    color: "#e09090"; font.pixelSize: 9; font.bold: true
+                                }
+                                Label {
+                                    text: "Recuperas: " + craftMarketWindow.formatKinah(modelData.expectedRevenue) + " K"
+                                    color: "#9ad9ec"; font.pixelSize: 9; font.bold: true
+                                }
+                                Rectangle {
+                                    implicitWidth: profPlanLbl.implicitWidth + 8; implicitHeight: 20; radius: 3
+                                    color: "#1c3d2c"; border.width: 1; border.color: "#54cf82"
+                                    Label {
+                                        id: profPlanLbl; anchors.centerIn: parent
+                                        text: "+" + craftMarketWindow.formatKinah(modelData.netProfit) + " K (" + (modelData.roiPct > 0 ? "+" : "") + modelData.roiPct + "% ROI)"
+                                        color: "#54cf82"; font.pixelSize: 9; font.bold: true
+                                    }
+                                }
+                            }
+
+                            // Desglose de Lista de Compra de Ingredientes
+                            RowLayout {
+                                Layout.fillWidth: true; spacing: 4
+                                Label {
+                                    text: "🛒 Comprar exacto:"
+                                    color: "#f1c778"; font.pixelSize: 8; font.bold: true
+                                }
+                                Flow {
+                                    Layout.fillWidth: true; spacing: 6
+                                    Repeater {
+                                        model: modelData.shoppingList || []
+                                        delegate: Label {
+                                            required property var modelData
+                                            text: "• " + modelData.totalNeeded + "x " + modelData.name + " (" + craftMarketWindow.formatKinah(modelData.totalCost) + " K)" + (modelData.isVendorOrCrafted ? " [Taller/NPC]" : "")
+                                            color: modelData.isVendorOrCrafted ? "#54cf82" : "#c0cbdc"
+                                            font.pixelSize: 8
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -348,10 +470,27 @@ Window {
                             text: "[" + (modelData.categoryName || "Crafteo") + "]"
                             color: "#8fa1b8"; font.pixelSize: 9; font.bold: true
                         }
-                        Label {
-                            text: modelData.name || "Receta"
-                            color: "#ffffff"; font.pixelSize: 11; font.bold: true
-                            Layout.fillWidth: true; elide: Text.ElideRight
+                        ColumnLayout {
+                            Layout.fillWidth: true; spacing: 2
+                            Label {
+                                text: modelData.name || "Receta"
+                                color: "#ffffff"; font.pixelSize: 11; font.bold: true
+                                Layout.fillWidth: true; elide: Text.ElideRight
+                            }
+                            // Badge de Proc Brillante (Combo Chance) si la receta lo posee
+                            RowLayout {
+                                visible: Boolean(modelData.hasCombo)
+                                spacing: 4
+                                Rectangle {
+                                    implicitWidth: comboLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
+                                    color: "#2a2210"; border.width: 1; border.color: "#f2c15a"
+                                    Label {
+                                        id: comboLbl; anchors.centerIn: parent
+                                        text: "✨ Proc +" + (modelData.comboRatePct || 25) + "%: " + (modelData.chanceName || "Brillante") + " (" + craftMarketWindow.formatKinah(modelData.chancePrice || 0) + " K)"
+                                        color: "#f2c15a"; font.pixelSize: 8; font.bold: true
+                                    }
+                                }
+                            }
                         }
                         // Badge de Costo
                         ColumnLayout {
@@ -361,7 +500,12 @@ Window {
                                 color: "#e09090"; font.pixelSize: 9
                             }
                             Label {
-                                text: "Venta: " + (Number(modelData.sellPrice || 0) > 0 ? (craftMarketWindow.formatKinah(modelData.sellPrice) + " K") : "Sin cotizar")
+                                text: {
+                                    const sp = Number(modelData.sellPrice || 0)
+                                    if (sp <= 0) return "Venta: Sin cotizar"
+                                    const lots = Number(modelData.resultListings || 0)
+                                    return "Venta: " + craftMarketWindow.formatKinah(sp) + " K" + (lots > 0 ? (" (" + lots + " lotes)") : " (Ref.)")
+                                }
                                 color: "#9ad9ec"; font.pixelSize: 9
                             }
                         }
@@ -429,10 +573,27 @@ Window {
                                     text: {
                                         const p = Number(modelData.unitPrice || 0)
                                         const lots = Number(modelData.listings || 0)
-                                        if (p <= 0) return "Precio no listado"
-                                        return craftMarketWindow.formatKinah(p) + " K c/u" + (lots > 0 ? (" (" + lots + " lotes)") : "")
+                                        const isVendorOrCrafted = Boolean(modelData.isVendorOrCrafted)
+                                        if (p <= 0) return "Sin cotización"
+                                        let txt = craftMarketWindow.formatKinah(p) + " K c/u"
+                                        if (isVendorOrCrafted) {
+                                            txt += " (Taller / Tienda NPC)"
+                                        } else if (lots > 0) {
+                                            txt += " (" + lots + " lotes activos)"
+                                        } else {
+                                            txt += " (Ref. reciente · Sin stock)"
+                                        }
+                                        return txt
                                     }
-                                    color: Number(modelData.unitPrice || 0) > 0 ? "#9ad9ec" : "#7e8ea6"
+                                    color: {
+                                        const p = Number(modelData.unitPrice || 0)
+                                        const lots = Number(modelData.listings || 0)
+                                        const isVendorOrCrafted = Boolean(modelData.isVendorOrCrafted)
+                                        if (p <= 0) return "#7e8ea6"
+                                        if (isVendorOrCrafted) return "#54cf82"
+                                        if (lots > 0) return "#9ad9ec"
+                                        return "#e5c07b"
+                                    }
                                     font.pixelSize: 9
                                 }
                             }
