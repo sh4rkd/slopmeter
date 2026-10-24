@@ -453,3 +453,47 @@ func buildSelfBuff2A(id uint32, x, y, z float32) []byte {
 	putVec3(pos[:], x, y, z)
 	return append(p, pos[:]...)
 }
+
+func TestRadarStaticGatheringSpotsInZone(t *testing.T) {
+	now := time.Now()
+	fight := newEncounter(0, 5*time.Second, 90*time.Second)
+	self := game.Entity(100)
+
+	// Map 1010 (Verteron) load packet 0x3621: body[4:8] is uint32(1010)
+	var mapLoad [12]byte
+	binary.LittleEndian.PutUint32(mapLoad[4:8], 1010)
+	fight.observeRadar(aMessage{
+		opcode:  0x3621,
+		flags:   wire.FromServer,
+		payload: mapLoad[:],
+		t:       now,
+	}, self)
+
+	// Set player position near a known Verteron gathering node: (13198.2, 20798.4, 27214.0)
+	selfPosBytes := buildSelfBuff2A(100, 13198.2, 20798.4, 27214.0)
+	fight.observeRadar(aMessage{
+		opcode:  0x382A,
+		flags:   wire.FromServer,
+		payload: selfPosBytes,
+		t:       now.Add(10 * time.Millisecond),
+	}, self)
+
+	snap := fight.snapshot(identities{self: self, name: "Gatherer"}, now.Add(20*time.Millisecond))
+	if len(snap.Radar) == 0 {
+		t.Fatal("expected gathering nodes near Verteron position, got none")
+	}
+
+	foundOdyle := false
+	for _, item := range snap.Radar {
+		if item.Name == "Odyle" && item.Category == radarCategoryOdyle {
+			foundOdyle = true
+			if item.Distance > 1.0 {
+				t.Fatalf("expected Odyle at player position (~0m), got distance %.1f", item.Distance)
+			}
+			break
+		}
+	}
+	if !foundOdyle {
+		t.Fatalf("expected Odyle node in snapshot, got: %+v", snap.Radar)
+	}
+}

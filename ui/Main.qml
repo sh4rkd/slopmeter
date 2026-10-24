@@ -303,16 +303,16 @@ Window {
                             ToolTip.visible: resetFilterHover.hovered; ToolTip.text: "Restablecer filtros y mostrar todos los oficios y recursos"
                         }
                     }
-                    Flow {
+                    RowLayout {
                         id: professionFlow
                         objectName: "radarProfessionFilterBar"
                         Layout.fillWidth: true
-                        spacing: 3
+                        spacing: 2
                         Repeater {
                             model: [
                                 { key: "chest", label: "Cubos", icon: "◈", active: backend.radarChests, color: "#f2c15a", visible: true },
-                                { key: "ore", label: "Minería", icon: "⬡", active: backend.radarOres, color: "#ff9f5a", visible: true },
-                                { key: "herb", label: "Hierbas", icon: "❖", active: backend.radarHerbs, color: "#7be35a", visible: true },
+                                { key: "ore", label: "Minas", icon: "⬡", active: backend.radarOres, color: "#ff9f5a", visible: true },
+                                { key: "herb", label: "Plantas", icon: "❖", active: backend.radarHerbs, color: "#7be35a", visible: true },
                                 { key: "gem", label: "Gemas", icon: "◆", active: backend.radarGems, color: "#e082ff", visible: true },
                                 { key: "wood", label: "Madera", icon: "▤", active: backend.radarWood, color: "#c89b6e", visible: true },
                                 { key: "odyle", label: "Odyle", icon: "✦", active: backend.radarOdyle, color: "#6be0ff", visible: true },
@@ -322,15 +322,17 @@ Window {
                                 required property var modelData
                                 objectName: "radarFilter_" + modelData.key
                                 visible: modelData.visible
-                                implicitWidth: modelData.visible ? (pillRow.implicitWidth + 8) : 0
-                                implicitHeight: modelData.visible ? 18 : 0; radius: 3
+                                Layout.fillWidth: true
+                                Layout.preferredWidth: 1
+                                implicitHeight: 16
+                                radius: 3
                                 color: modelData.active ? Qt.rgba(40/255, 58/255, 78/255, 0.92) : "#131b26"
                                 border.width: 1
                                 border.color: modelData.active ? modelData.color : "#344254"
                                 RowLayout {
                                     id: pillRow
                                     anchors.centerIn: parent
-                                    spacing: 3
+                                    spacing: 2
                                     Label {
                                         text: modelData.icon
                                         font.pixelSize: 8
@@ -338,8 +340,10 @@ Window {
                                     }
                                     Label {
                                         text: modelData.label
-                                        font.pixelSize: 9; font.bold: modelData.active
+                                        font.pixelSize: 9
+                                        font.bold: modelData.active
                                         color: modelData.active ? modelData.color : "#7e8ea6"
+                                        elide: Text.ElideRight
                                     }
                                 }
                                 TapHandler {
@@ -357,52 +361,60 @@ Window {
                             }
                         }
                     }
-                    Flow {
+                    Flickable {
                         id: subFilterFlow
                         objectName: "radarSubFilterBar"
                         Layout.fillWidth: true
-                        spacing: 3
+                        implicitHeight: (backend.radarSubmenu !== "" || backend.radarItemFilter !== "") ? 18 : 0
                         visible: backend.radarSubmenu !== "" || backend.radarItemFilter !== ""
-                        Rectangle {
-                            implicitWidth: allSubLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
-                            color: backend.radarItemFilter === "" ? "#2b4257" : "#141c26"
-                            border.width: 1; border.color: backend.radarItemFilter === "" ? "#9ad9ec" : "#354559"
-                            Label {
-                                id: allSubLbl; anchors.centerIn: parent
-                                text: "Todos (" + (backend.radarSubmenu !== "" ? backend.radarSubmenu.toUpperCase() : "OFICIO") + ")"
-                                font.pixelSize: 9; font.bold: backend.radarItemFilter === ""
-                                color: backend.radarItemFilter === "" ? "#ffffff" : "#8e9eb5"
-                            }
-                            TapHandler { onTapped: { backend.radarItemFilter = "" } }
-                            HoverHandler { cursorShape: Qt.PointingHandCursor }
-                        }
-                        Repeater {
-                            model: backend.radarSubmenu !== "" ? backend.radarSubItemsFor(backend.radarSubmenu) : (backend.radarItemFilter !== "" ? [backend.radarItemFilter] : [])
-                            delegate: Rectangle {
-                                required property string modelData
-                                implicitWidth: subItemLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
-                                property bool selected: backend.radarItemFilter === modelData || (backend.radarItemFilter !== "" && modelData.indexOf(backend.radarItemFilter) !== -1)
-                                color: selected ? "#2b4257" : "#182230"
-                                border.width: 1; border.color: selected ? "#54cf82" : "#35465c"
+                        contentWidth: subFilterRow.implicitWidth
+                        contentHeight: 18
+                        clip: true
+                        boundsBehavior: Flickable.StopAtBounds
+                        RowLayout {
+                            id: subFilterRow
+                            spacing: 3
+                            Rectangle {
+                                implicitWidth: allSubLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
+                                color: backend.radarItemFilter === "" ? "#2b4257" : "#141c26"
+                                border.width: 1; border.color: backend.radarItemFilter === "" ? "#9ad9ec" : "#354559"
                                 Label {
-                                    id: subItemLbl; anchors.centerIn: parent
-                                    text: modelData.replace(" Gemstone", "").replace(" Ore", "").replace(" Log", "")
-                                    font.pixelSize: 9; font.bold: parent.selected
-                                    color: parent.selected ? "#54cf82" : "#c0cbdc"
+                                    id: allSubLbl; anchors.centerIn: parent
+                                    text: "Todos (" + (backend.radarSubmenu !== "" ? backend.radarSubmenu.toUpperCase() : "OFICIO") + ")"
+                                    font.pixelSize: 9; font.bold: backend.radarItemFilter === ""
+                                    color: backend.radarItemFilter === "" ? "#ffffff" : "#8e9eb5"
                                 }
-                                TapHandler {
-                                    onTapped: backend.radarItemFilter = (backend.radarItemFilter === modelData ? "" : modelData)
-                                }
+                                TapHandler { onTapped: { backend.radarItemFilter = "" } }
                                 HoverHandler { cursorShape: Qt.PointingHandCursor }
                             }
-                        }
-                        Rectangle {
-                            implicitWidth: 16; implicitHeight: 16; radius: 3
-                            color: "#222c3a"; border.width: 1; border.color: "#3a4a5e"
-                            Label { anchors.centerIn: parent; text: "×"; color: "#8e9eb5"; font.pixelSize: 10; font.bold: true }
-                            TapHandler { onTapped: { backend.radarItemFilter = ""; backend.radarSubmenu = "" } }
-                            HoverHandler { id: closeSubHover; cursorShape: Qt.PointingHandCursor }
-                            ToolTip.visible: closeSubHover.hovered; ToolTip.text: "Cerrar desglose de recursos"
+                            Repeater {
+                                model: backend.radarSubmenu !== "" ? backend.radarSubItemsFor(backend.radarSubmenu) : (backend.radarItemFilter !== "" ? [backend.radarItemFilter] : [])
+                                delegate: Rectangle {
+                                    required property string modelData
+                                    implicitWidth: subItemLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
+                                    property bool selected: backend.radarItemFilter === modelData || (backend.radarItemFilter !== "" && modelData.indexOf(backend.radarItemFilter) !== -1)
+                                    color: selected ? "#2b4257" : "#182230"
+                                    border.width: 1; border.color: selected ? "#54cf82" : "#35465c"
+                                    Label {
+                                        id: subItemLbl; anchors.centerIn: parent
+                                        text: modelData.replace(" Gemstone", "").replace(" Ore", "").replace(" Log", "")
+                                        font.pixelSize: 9; font.bold: parent.selected
+                                        color: parent.selected ? "#54cf82" : "#c0cbdc"
+                                    }
+                                    TapHandler {
+                                        onTapped: backend.radarItemFilter = (backend.radarItemFilter === modelData ? "" : modelData)
+                                    }
+                                    HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                }
+                            }
+                            Rectangle {
+                                implicitWidth: 16; implicitHeight: 16; radius: 3
+                                color: "#222c3a"; border.width: 1; border.color: "#3a4a5e"
+                                Label { anchors.centerIn: parent; text: "×"; color: "#8e9eb5"; font.pixelSize: 10; font.bold: true }
+                                TapHandler { onTapped: { backend.radarItemFilter = ""; backend.radarSubmenu = "" } }
+                                HoverHandler { id: closeSubHover; cursorShape: Qt.PointingHandCursor }
+                                ToolTip.visible: closeSubHover.hovered; ToolTip.text: "Cerrar desglose de recursos"
+                            }
                         }
                     }
                     // Flecha de navegación: apunta hacia donde caminar con el personaje.

@@ -47,6 +47,7 @@ func (e *encounter) enterMap(t time.Time, id uint32, boundary bool) {
 	}
 	e.scene.ID = id
 	e.scene.Name = mapCatalog[id]
+	e.radar.setMapID(id)
 	e.scene.candidate = 0
 	e.scene.arrival = false
 	e.scene.departed = false

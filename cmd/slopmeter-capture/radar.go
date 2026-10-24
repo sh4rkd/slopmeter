@@ -47,6 +47,7 @@ type radarEntity struct {
 
 type radarState struct {
 	entities   map[game.Entity]*radarEntity
+	mapID      uint32
 	selfPos    game.Pos
 	hasSelfPos bool
 	headingX   float32
@@ -559,6 +560,13 @@ func (r *radarState) clear() {
 	}
 }
 
+func (r *radarState) setMapID(id uint32) {
+	if r.mapID != id {
+		r.mapID = id
+		r.revision++
+	}
+}
+
 func (r *radarState) updateSelfPos(pos game.Pos) {
 	if !validWorldPos(pos) {
 		return
@@ -799,6 +807,14 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 		}
 	}
 
+	// Map load opcode 0x3621 (wire "21 36")
+	if m.opcode == 0x3621 && len(m.payload) >= 8 {
+		mapID := binary.LittleEndian.Uint32(m.payload[4:8])
+		if mapID != 0 {
+			e.radar.setMapID(mapID)
+		}
+	}
+
 	// In-map teleport position fix (0x3623)
 	if m.opcode == 0x3623 && len(m.payload) >= 18 {
 		if pos, valid := readVec3LE(m.payload[6:18]); valid {
@@ -808,12 +824,29 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 
 	// Direct cube/actor spawn opcode 0x3641 (13889)
 	if m.opcode == 0x3641 {
-		if id, rest, ok := readVar(m.payload); ok && id != 0 && len(rest) >= 5+18 {
-			offset := 5
-			npcID := binary.LittleEndian.Uint32(rest[offset : offset+4])
-			if def, found := radarCatalog[npcID]; found && def.Category == radarCategoryChest {
-				if pos, valid := readVec3LE(rest[offset+6 : offset+18]); valid {
-					e.radar.upsertEntity(m.t, game.Entity(id), npcID, 0, def.Name, pos)
+		if id, rest, ok := readVar(m.payload); ok && id != 0 {
+			// 1. Direct cube lookup at offset 5 (original working logic)
+			if len(rest) >= 5+18 {
+				offset := 5
+				npcID := binary.LittleEndian.Uint32(rest[offset : offset+4])
+				if def, found := radarCatalog[npcID]; found && def.Category == radarCategoryChest {
+					if pos, valid := readVec3LE(rest[offset+6 : offset+18]); valid {
+						e.radar.upsertEntity(m.t, game.Entity(id), npcID, 0, def.Name, pos)
+					}
+				}
+			}
+			// 2. HamMeter verified entity pattern: find marker 00 [00|40] 02
+			limit := len(rest) - 15
+			if limit > 60 {
+				limit = 60
+			}
+			for i := 3; i <= limit; i++ {
+				if rest[i] == 0x00 && (rest[i+1]&0xBF) == 0 && rest[i+2] == 0x02 {
+					mobCode := uint32(rest[i-3]) | (uint32(rest[i-2]) << 8) | (uint32(rest[i-1]) << 16)
+					if pos, valid := readVec3LE(rest[i+3 : i+3+12]); valid {
+						e.radar.upsertEntity(m.t, game.Entity(id), mobCode, 0, "", pos)
+					}
+					break
 				}
 			}
 		}
@@ -990,56 +1023,110 @@ func computeDirection(selfPos game.Pos, hasSelfPos bool, hx, hy float32, hasHead
 }
 
 func (e *encounter) radarSnapshot() []radarDisplay {
-	if len(e.radar.entities) == 0 {
-		return nil
-	}
-	out := make([]radarDisplay, 0, len(e.radar.entities))
-	for _, ent := range e.radar.entities {
-		dist, rx, ry, dz, angle, hDir, vDir, hasDir := computeDirection(
-			e.radar.selfPos,
-			e.radar.hasSelfPos,
-			e.radar.headingX,
-			e.radar.headingY,
-			e.radar.hasHeading,
-			ent.pos,
-		)
-		if e.radar.hasSelfPos && dist > 500 {
-			continue
-		}
-		relAngle := 0.0
-		if e.radar.hasHeading && hasDir {
-			// Same compass frame as computeDirection: bearing = atan2(east=+X, north=-Y).
-			headingDeg := math.Atan2(float64(e.radar.headingX), -float64(e.radar.headingY)) * 180.0 / math.Pi
-			relAngle = math.Mod(angle-headingDeg+540.0, 360.0) - 180.0
-		}
-		// Hotter/colder trend with 0.5 m hysteresis so it does not flicker.
-		if ent.lastDist == 0 {
-			ent.lastDist = dist
-		} else if d := dist - ent.lastDist; math.Abs(d) >= 0.5 {
-			if d < 0 {
-				ent.trend = 1
-			} else {
-				ent.trend = -1
+	var out []radarDisplay
+	if len(e.radar.entities) > 0 {
+		out = make([]radarDisplay, 0, len(e.radar.entities))
+		for _, ent := range e.radar.entities {
+			dist, rx, ry, dz, angle, hDir, vDir, hasDir := computeDirection(
+				e.radar.selfPos,
+				e.radar.hasSelfPos,
+				e.radar.headingX,
+				e.radar.headingY,
+				e.radar.hasHeading,
+				ent.pos,
+			)
+			if e.radar.hasSelfPos && dist > 500 {
+				continue
 			}
-			ent.lastDist = dist
+			relAngle := 0.0
+			if e.radar.hasHeading && hasDir {
+				// Same compass frame as computeDirection: bearing = atan2(east=+X, north=-Y).
+				headingDeg := math.Atan2(float64(e.radar.headingX), -float64(e.radar.headingY)) * 180.0 / math.Pi
+				relAngle = math.Mod(angle-headingDeg+540.0, 360.0) - 180.0
+			}
+			// Hotter/colder trend with 0.5 m hysteresis so it does not flicker.
+			if ent.lastDist == 0 {
+				ent.lastDist = dist
+			} else if d := dist - ent.lastDist; math.Abs(d) >= 0.5 {
+				if d < 0 {
+					ent.trend = 1
+				} else {
+					ent.trend = -1
+				}
+				ent.lastDist = dist
+			}
+			out = append(out, radarDisplay{
+				ID:         ent.id,
+				NPC:        ent.npc,
+				Name:       ent.name,
+				Category:   ent.category,
+				Distance:   math.Round(dist*10) / 10,
+				RelX:       math.Round(rx*10) / 10,
+				RelY:       math.Round(ry*10) / 10,
+				ZDelta:     math.Round(dz*10) / 10,
+				Angle:      math.Round(angle),
+				HorizDir:   hDir,
+				VertDir:    vDir,
+				HasDir:     hasDir,
+				RelAngle:   math.Round(relAngle),
+				HasHeading: e.radar.hasHeading && hasDir,
+				Trend:      ent.trend,
+			})
 		}
-		out = append(out, radarDisplay{
-			ID:       ent.id,
-			NPC:      ent.npc,
-			Name:     ent.name,
-			Category: ent.category,
-			Distance: math.Round(dist*10) / 10,
-			RelX:     math.Round(rx*10) / 10,
-			RelY:     math.Round(ry*10) / 10,
-			ZDelta:   math.Round(dz*10) / 10,
-			Angle:    math.Round(angle),
-			HorizDir: hDir,
-			VertDir:  vDir,
-			HasDir:   hasDir,
-			RelAngle:   math.Round(relAngle),
-			HasHeading: e.radar.hasHeading && hasDir,
-			Trend:      ent.trend,
-		})
+	}
+
+	// Query nearby gathering spots from spatial index if player position and map are known
+	if e.radar.hasSelfPos && e.radar.mapID != 0 {
+		spots := queryNearbyGatheringSpots(e.radar.mapID, e.radar.selfPos, 150.0)
+			for i, spot := range spots {
+				pos := game.Pos{X: spot.X, Y: spot.Y, Z: spot.Z}
+				// Skip if a dynamic entity is within 5m of this spot
+				tooClose := false
+				for _, ent := range e.radar.entities {
+					if math.Hypot(float64(ent.pos.X-pos.X), float64(ent.pos.Y-pos.Y)) < 500 {
+						tooClose = true
+						break
+					}
+				}
+				if tooClose {
+					continue
+				}
+				dist, rx, ry, dz, angle, hDir, vDir, hasDir := computeDirection(
+					e.radar.selfPos,
+					e.radar.hasSelfPos,
+					e.radar.headingX,
+					e.radar.headingY,
+					e.radar.hasHeading,
+					pos,
+				)
+				relAngle := 0.0
+				if e.radar.hasHeading && hasDir {
+					headingDeg := math.Atan2(float64(e.radar.headingX), -float64(e.radar.headingY)) * 180.0 / math.Pi
+					relAngle = math.Mod(angle-headingDeg+540.0, 360.0) - 180.0
+				}
+				spotID := uint32(0x80000000 | (uint32(spot.MapID&0x7F) << 24) | (uint32(i) & 0x00FFFFFF))
+				out = append(out, radarDisplay{
+					ID:         game.Entity(spotID),
+					NPC:        0,
+					Name:       spot.Name,
+					Category:   spot.Category,
+					Distance:   math.Round(dist*10) / 10,
+					RelX:       math.Round(rx*10) / 10,
+					RelY:       math.Round(ry*10) / 10,
+					ZDelta:     math.Round(dz*10) / 10,
+					Angle:      math.Round(angle),
+					HorizDir:   hDir,
+					VertDir:    vDir,
+					HasDir:     hasDir,
+					RelAngle:   math.Round(relAngle),
+					HasHeading: e.radar.hasHeading && hasDir,
+					Trend:      0,
+				})
+			}
+		}
+
+	if len(out) == 0 {
+		return nil
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Distance == out[j].Distance {
