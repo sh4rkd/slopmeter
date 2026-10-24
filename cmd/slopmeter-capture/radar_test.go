@@ -109,18 +109,27 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 		t:       now.Add(480 * time.Millisecond),
 	}, self)
 
-	// 6. Non-cube resource or monster (1090201) -> should NOT be tracked on radar
-	ignoredPayload := buildSpawnPayload(506, 4, "", 1090201, 12800, 10000, 5000)
+	// 6. Asvata Log resource (1090201) -> tracked on radar as Wood
+	woodPayload := buildSpawnPayload(506, 4, "", 1090201, 12800, 10000, 5000)
+	fight.observeRadar(aMessage{
+		opcode:  0x3640,
+		flags:   wire.FromServer,
+		payload: woodPayload,
+		t:       now.Add(500 * time.Millisecond),
+	}, self)
+
+	// 7. Non-catalog monster or scenery entity (9990001) -> should NOT be tracked on radar
+	ignoredPayload := buildSpawnPayload(507, 4, "", 9990001, 13000, 10000, 5000)
 	fight.observeRadar(aMessage{
 		opcode:  0x3640,
 		flags:   wire.FromServer,
 		payload: ignoredPayload,
-		t:       now.Add(500 * time.Millisecond),
+		t:       now.Add(550 * time.Millisecond),
 	}, self)
 
 	snap := fight.snapshot(identities{self: self, name: "Tester"}, now.Add(time.Second))
-	if len(snap.Radar) != 5 {
-		t.Fatalf("expected 5 radar items (only cubes), got %d", len(snap.Radar))
+	if len(snap.Radar) != 6 {
+		t.Fatalf("expected 6 radar items (cubes + gathering), got %d", len(snap.Radar))
 	}
 
 	byID := make(map[game.Entity]radarDisplay)
@@ -148,6 +157,10 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 	if chest5.Category != radarCategoryChest || chest5.Name != "Hidden Cube V04" || chest5.HorizDir != "Oeste" || chest5.VertDir != "Nivel" || chest5.Distance != 25.0 || chest5.RelX != -25.0 || chest5.RelY != 0.0 {
 		t.Fatalf("unexpected chest5 radar item: %+v", chest5)
 	}
+	wood6 := byID[506]
+	if wood6.Category != radarCategoryWood || wood6.Name != "Asvata Log" || wood6.HorizDir != "Este" || wood6.VertDir != "Nivel" || wood6.RelX != 18.0 {
+		t.Fatalf("unexpected wood6 radar item: %+v", wood6)
+	}
 
 	// Despawn chest on Death packet
 	fight.observeRadar(aMessage{
@@ -158,7 +171,7 @@ func TestRadarDirectionsAndCategories(t *testing.T) {
 	}, self)
 
 	snapAfter := fight.snapshot(identities{self: self, name: "Tester"}, now.Add(2*time.Second))
-	if len(snapAfter.Radar) != 4 {
+	if len(snapAfter.Radar) != 5 {
 		t.Fatalf("expected 5 radar items after chest despawn, got %d", len(snapAfter.Radar))
 	}
 }
@@ -209,8 +222,8 @@ func TestRadarClientMovementAndByteInlineName(t *testing.T) {
 }
 
 func TestRadarClassificationAccuracy(t *testing.T) {
-	// Verified Hidden Cubes should succeed
-	validCubes := []struct {
+	// Verified Hidden Cubes and Gathering Nodes should succeed
+	validTargets := []struct {
 		code     uint32
 		wantCat  radarCategory
 		wantName string
@@ -219,9 +232,14 @@ func TestRadarClassificationAccuracy(t *testing.T) {
 		{1200039, radarCategoryChest, "Hidden Cube"},
 		{1301199, radarCategoryChest, "Asmodian Hidden Cube V04"},
 		{1401335, radarCategoryChest, "Hidden Cube"},
+		{1080101, radarCategoryOre, "Orichalcum Ore"},
+		{1080601, radarCategoryHerb, "Aria"},
+		{1080501, radarCategoryGem, "Sapphire Gemstone"},
+		{1090201, radarCategoryWood, "Asvata Log"},
+		{1080001, radarCategoryOdyle, "Odyle"},
 	}
 
-	for _, tc := range validCubes {
+	for _, tc := range validTargets {
 		name, cat, ok := classifyRadarTarget(tc.code, 0, "")
 		if !ok {
 			t.Errorf("code %d: expected ok=true, got false", tc.code)
@@ -234,14 +252,14 @@ func TestRadarClassificationAccuracy(t *testing.T) {
 		}
 	}
 
-	// Non-cube resources and background entities should be completely ignored (ok == false)
+	// Non-catalog monsters, combat NPCs and random background entities should be completely ignored (ok == false)
 	ignoredCodes := []uint32{
-		1081500, // Herb
-		1050000, // Plant
-		1580050, // Odyle
-		1080550, // Gem
-		1080150, // Ore
-		1080250, // Wood
+		1081500, // Non-catalog ID
+		1050000, // Random mob
+		1580050, // Non-catalog ID
+		1080550, // Non-catalog ID
+		1080150, // Non-catalog ID
+		1080250, // Non-catalog ID
 		1200550, // Misc NPC
 		1305100, // Misc NPC
 		2900150, // Misc Object

@@ -215,9 +215,9 @@ Window {
                     function categoryIcon(cat) { return backend.radarCategoryIcon(cat) }
                     function subItemsFor(catKey) { return backend.radarSubItemsFor(catKey) }
                     function hasTarget(t) { return Boolean(t && (t.name || t.id)) }
-                    function toggleCategory(catKey, button) {
-                        if (button === Qt.RightButton) {
-                            backend.radarSubmenu = (backend.radarSubmenu === catKey) ? "" : catKey
+                    function toggleCategory(catKey, button, isDouble) {
+                        if (isDouble || button === Qt.RightButton) {
+                            backend.selectOnlyProfession(catKey)
                             return
                         }
                         if (catKey === "chest") backend.radarChests = !backend.radarChests
@@ -227,14 +227,14 @@ Window {
                         else if (catKey === "herb") backend.radarHerbs = !backend.radarHerbs
                         else if (catKey === "wood") backend.radarWood = !backend.radarWood
                         else if (catKey === "other") backend.radarOther = !backend.radarOther
-                        if (backend.radarSubItemsFor(catKey).length > 1) {
+                        if (backend.radarSubItemsFor(catKey).length >= 1) {
                             backend.radarSubmenu = catKey
                         }
                     }
                     RowLayout {
                         Layout.fillWidth: true; spacing: 3
                         Label {
-                            text: backend.radarSimpleMode ? "◎ AVISO CUBO" : "◎ MAPA"
+                            text: backend.radarSimpleMode ? "◎ AVISO RADAR" : "◎ MAPA"
                             color: "#54cf82"; font.pixelSize: 10; font.bold: true
                         }
                         Rectangle {
@@ -276,12 +276,12 @@ Window {
                         Repeater {
                             model: [
                                 { key: "chest", label: "Cubos", active: backend.radarChests, color: "#f2c15a", visible: true },
-                                { key: "odyle", label: "Odyle", active: backend.radarOdyle, color: "#6be0ff", visible: false },
-                                { key: "gem", label: "Gemas", active: backend.radarGems, color: "#e082ff", visible: false },
-                                { key: "ore", label: "Mineral", active: backend.radarOres, color: "#ff9f5a", visible: false },
-                                { key: "herb", label: "Hierbas", active: backend.radarHerbs, color: "#7be35a", visible: false },
-                                { key: "wood", label: "Madera", active: backend.radarWood, color: "#c89b6e", visible: false },
-                                { key: "other", label: "Otros", active: backend.radarOther, color: "#c0cbdc", visible: false }
+                                { key: "ore", label: "Minería", active: backend.radarOres, color: "#ff9f5a", visible: true },
+                                { key: "herb", label: "Hierbas", active: backend.radarHerbs, color: "#7be35a", visible: true },
+                                { key: "gem", label: "Gemas", active: backend.radarGems, color: "#e082ff", visible: true },
+                                { key: "wood", label: "Madera", active: backend.radarWood, color: "#c89b6e", visible: true },
+                                { key: "odyle", label: "Odyle", active: backend.radarOdyle, color: "#6be0ff", visible: true },
+                                { key: "other", label: "Otros", active: backend.radarOther, color: "#c0cbdc", visible: backend.radarOther }
                             ]
                             delegate: Rectangle {
                                 required property var modelData
@@ -302,10 +302,15 @@ Window {
                                 TapHandler {
                                     acceptedButtons: Qt.LeftButton | Qt.RightButton
                                     onTapped: function(eventPoint, button) {
-                                        radarSection.toggleCategory(modelData.key, button)
+                                        radarSection.toggleCategory(modelData.key, button, false)
+                                    }
+                                    onDoubleTapped: function() {
+                                        radarSection.toggleCategory(modelData.key, Qt.LeftButton, true)
                                     }
                                 }
-                                HoverHandler { cursorShape: Qt.PointingHandCursor }
+                                HoverHandler { id: pillHover; cursorShape: Qt.PointingHandCursor }
+                                ToolTip.visible: pillHover.hovered
+                                ToolTip.text: "Clic: activar/desactivar\nClic derecho o doble clic: Solo " + modelData.label
                             }
                         }
                     }
@@ -368,7 +373,7 @@ Window {
                         border.color: dist <= 5 ? "#f2c15a" : (hasT && target.trend > 0 ? "#54cf82" : (hasT && target.trend < 0 ? "#ff6b6b" : "#3d6b55"))
                         function turnText() {
                             if (!hasT) return ""
-                            if (dist <= 5) return "¡ESTÁS ENCIMA DEL CUBO!"
+                            if (dist <= 5) return "¡ESTÁS ENCIMA DEL OBJETIVO!"
                             if (!relative) return "Camina unos pasos para calibrar"
                             const a = navAngle
                             if (Math.abs(a) <= 20) return "SIGUE RECTO"
@@ -457,7 +462,15 @@ Window {
                                 }
                                 Label {
                                     objectName: "radarSimpleTitle"
-                                    text: backend.displayRadar.length > 0 ? ("¡HAY " + (backend.displayRadar.length === 1 ? "UN CUBO CERCANO!" : backend.displayRadar.length + " CUBOS CERCANOS!")) : "Sin cubos en rango (110m)"
+                                    text: {
+                                        if (backend.displayRadar.length === 0) {
+                                            return "Sin objetivos en rango (" + Math.round(backend.radarRangeMeters) + "m)"
+                                        }
+                                        const t = radarSection.selectedTarget()
+                                        if (!radarSection.hasTarget(t)) return "¡OBJETIVO DETECTADO!"
+                                        const name = (t.name || "OBJETIVO").toUpperCase()
+                                        return "¡" + name + " CERCANO!"
+                                    }
                                     color: backend.displayRadar.length > 0 ? "#54cf82" : "#7e8ea6"
                                     font.pixelSize: 11; font.bold: true
                                     Layout.fillWidth: true
@@ -509,7 +522,7 @@ Window {
                             }
                             Label {
                                 visible: backend.displayRadar.length > 1
-                                text: "+" + (backend.displayRadar.length - 1) + " cubos más detectados en el área"
+                                text: "+" + (backend.displayRadar.length - 1) + " más detectados en el área"
                                 color: "#9ad9ec"; font.pixelSize: 9
                                 Layout.leftMargin: 4
                             }

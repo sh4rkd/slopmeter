@@ -235,13 +235,25 @@ public:
     QString radarSubmenu() const {return radarSubmenuSetting;}
     void setRadarSubmenu(const QString &val) {if(radarSubmenuSetting==val) return;radarSubmenuSetting=val;emit radarSubmenuChanged();}
     Q_INVOKABLE QStringList radarSubItemsFor(const QString &catKey) const {
-        if(catKey=="gem") return {"Sapphire Gemstone", "Ruby Gemstone", "Diamond Gemstone"};
-        if(catKey=="ore") return {"Orichalcum Ore"};
-        if(catKey=="herb") return {"Azpha", "Calendula", "Pujery", "Conide", "Ohkra", "Morfa", "Raydam", "Aria", "Targena", "Mela", "Coriolus", "Inina", "Cypri", "Kukuru"};
-        if(catKey=="wood") return {"Asvata Log", "Yggdrasil Log"};
-        if(catKey=="odyle") return {"Odyle"};
-        if(catKey=="chest") return {"Hidden Cube"};
+        if(catKey=="gem") return {"Sapphire Gemstone", "Diamond Gemstone", "Ruby Gemstone", "Floating Tourmaline", "Veil Jewel"};
+        if(catKey=="ore") return {"Orichalcum Ore", "Fine Orichalcum", "Pure Orichalcum", "Radiant Orichalcum"};
+        if(catKey=="herb") return {"Aria", "Targena", "Azpha", "Calendula", "Mela", "Coriolus", "Inina", "Cypri", "Kukuru", "Raydam", "Morfa", "Conide", "Pujery", "Ohkra"};
+        if(catKey=="wood") return {"Asvata Log", "Yggdrasil Log", "Fine Wood", "Pure Wood", "Radiant Wood"};
+        if(catKey=="odyle") return {"Odyle", "Fine Odyle", "Pure Odyle", "Radiant Odyle", "Odylium Ore", "Crystal"};
+        if(catKey=="chest") return {"Hidden Cube", "Supply Chest", "Treasure Chest"};
         return {};
+    }
+    Q_INVOKABLE void selectOnlyProfession(const QString &profKey) {
+        setRadarChests(profKey == "chest");
+        setRadarOdyle(profKey == "odyle");
+        setRadarGems(profKey == "gem");
+        setRadarOres(profKey == "ore");
+        setRadarHerbs(profKey == "herb");
+        setRadarWood(profKey == "wood");
+        setRadarOther(profKey == "other");
+        setRadarItemFilter(QString());
+        setRadarSubmenu(profKey);
+        emit radarChanged();
     }
     Q_INVOKABLE QVariantMap selectedRadarTarget() const {
         const auto rows=displayRadar();
@@ -1218,12 +1230,18 @@ public:
                 (cat=="odyle" && radarOdyleSetting) ||
                 (cat=="gem" && radarGemsSetting) ||
                 (cat=="ore" && radarOresSetting) ||
-                (cat=="herb" && (radarHerbsSetting || radarResources())) ||
+                (cat=="herb" && radarHerbsSetting) ||
                 (cat=="wood" && radarWoodSetting) ||
-                (cat=="resource" && (radarHerbsSetting || radarResources())) ||
+                (cat=="resource" && (radarHerbsSetting || radarOresSetting || radarWoodSetting || radarGemsSetting)) ||
                 (cat=="object" && radarOtherSetting);
             if(!catMatch) continue;
-            if(!radarItemFilterSetting.isEmpty() && !name.contains(radarItemFilterSetting, Qt::CaseInsensitive)) continue;
+            if(!radarItemFilterSetting.isEmpty()) {
+                if(radarItemFilterSetting == "Orichalcum Ore") {
+                    if(name != "Orichalcum Ore" && (name.contains("Fine", Qt::CaseInsensitive) || name.contains("Pure", Qt::CaseInsensitive) || name.contains("Radiant", Qt::CaseInsensitive))) continue;
+                } else if(!name.contains(radarItemFilterSetting, Qt::CaseInsensitive)) {
+                    continue;
+                }
+            }
             filtered.append(m);
         }
         return filtered;
@@ -1529,12 +1547,13 @@ public:
             }
             // The backend already limits snapshots to the selected interval.
             // Apply the newest complete frame once per read, avoiding a second timer's latency.
-            if(!pending.isEmpty()) {currentState=pending.toVariantMap();pending={};if(!previewEnabled) refreshDisplay();}
+            if(!pending.isEmpty()) {currentState=pending.toVariantMap();pending={};if(!previewEnabled && !selfTesting) refreshDisplay();}
         });
         connect(&process,&QProcess::readyReadStandardError,this,[this] {auto text=QString::fromUtf8(process.readAllStandardError()).trimmed();if(!text.isEmpty()) setStatus(text);});
         connect(&process,&QProcess::errorOccurred,this,[this] {setCaptureReady(false);setStatus(process.errorString());});
         connect(&process,qOverload<int,QProcess::ExitStatus>(&QProcess::finished),this,[this](int code,QProcess::ExitStatus) {setCaptureReady(false);if(restartingCapture) {restartingCapture=false;QTimer::singleShot(0,this,[this]{startCapture();});return;}setStatus(code==0?"Capture finished":"Capture failed: "+message);});
     }
+    bool selfTesting = false;
     ~Bridge() {
         restartingCapture=false;
         if(interfaceLister.state()!=QProcess::NotRunning) {interfaceLister.kill();interfaceLister.waitForFinished(1000);}
@@ -1707,6 +1726,7 @@ int main(int argc,char **argv) {
     args.prepend("-json");args.append("-interval");args.append(QString::number(bridge.pollInterval())+"ms");for(int i=0;i<args.size();++i) if(args[i]=="-interface"&&i+1<args.size()) {bridge.setCaptureInterface(args[i+1]);args.removeAt(i+1);args.removeAt(i);break;}
     bridge.captureArguments=args;bridge.startCapture();bridge.refreshInterfaces();
     if(!isolated) updates.start();
+    if(test) bridge.selfTesting = true;
     if(test) QTimer::singleShot(500,&app,[&] {
         if(QGuiApplication::allWindows().size()!=1) {app.exit(2);return;}
         bridge.hide();window->show();if(!window->isVisible()) {app.exit(3);return;}
@@ -1835,6 +1855,7 @@ int main(int argc,char **argv) {
         QMetaObject::invokeMethod(window,"scoreValueText",Q_RETURN_ARG(QVariant,fullScore),Q_ARG(QVariant,QVariant(102301.0)));
         QMetaObject::invokeMethod(window,"bossHpValueText",Q_RETURN_ARG(QVariant,fullHp),Q_ARG(QVariant,QVariant(8000000.0)));
         if(fullDmg.toString().endsWith("M")||fullDmg.toString().endsWith("K")||fullScore.toString().endsWith("K")||fullHp.toString().endsWith("M")) {app.exit(92);return;}
+        settle();
         QQuickItem *minStats=nullptr,*dmgFill=nullptr,*nameLbl=nullptr;
         QList<QQuickItem*> searchQueue{bars};
         while(!searchQueue.isEmpty()) {
@@ -1904,6 +1925,7 @@ int main(int argc,char **argv) {
         updates.applyReleases("[]");settle();if(updateLink->isVisible()) {app.exit(72);return;}
         fprintf(stderr,"Release comparison, alpha updates, malformed/offline replies and footer link checks passed.\n");
         const auto stateBeforeScene=bridge.currentState;
+        const auto historyBeforeScene=bridge.history;bridge.history.clear();
         const auto selectionBeforeScene=bridge.selectedSession;bridge.selectedSession=0;
         bridge.currentState["scene"]=QVariantMap{{"id",600021},{"name","Fire Temple"},{"instance",42}};bridge.refreshDisplay();settle();
         auto combatLabel=window->findChild<QObject*>("combatStatus");
@@ -1951,12 +1973,18 @@ int main(int argc,char **argv) {
         if(bridge.displayRadar().size()!=5) {app.exit(98);return;}
         {Bridge restored;if(!restored.radarEnabled()||restored.radarChests()||restored.radarGems()||!restored.radarOther()) {app.exit(98);return;}}
         bridge.setRadarChests(true);bridge.setRadarGems(true);bridge.setRadarOther(false);bridge.setRadarEnabled(false);settle();
+        bridge.history=historyBeforeScene;
         bridge.currentState=stateBeforeScene;bridge.selectedSession=selectionBeforeScene;bridge.refreshDisplay();settle();
         fprintf(stderr,"Scene metadata, PvP duel mode, enemy split bars, rival detail and 6-way radar checks passed.\n");
         auto resetButton=window->findChild<QQuickItem*>("resetDamageButton");
         auto settingsButton=window->findChild<QQuickItem*>("settingsButton");
  auto minimizeButton=window->findChild<QQuickItem*>("minimizeButton");
  if(!resetButton||!settingsButton||!minimizeButton||resetButton->x()<=settingsButton->x()||resetButton->x()>=minimizeButton->x()) {app.exit(76);return;}
+        if(bridge.process.state()!=QProcess::NotRunning) {
+            bridge.process.terminate();
+            bridge.process.waitForFinished(1000);
+            bridge.setCaptureReady(false);
+        }
         if(bridge.process.state()==QProcess::NotRunning) {
             const auto stateBeforeReset=bridge.currentState;const auto historyBeforeReset=bridge.history;
             if(!QMetaObject::invokeMethod(resetButton,"clicked")) {app.exit(77);return;}

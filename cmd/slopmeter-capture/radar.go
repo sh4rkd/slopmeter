@@ -118,6 +118,162 @@ var radarCatalog = map[uint32]radarDefinition{
 	1401335: {1401335, "Hidden Cube", radarCategoryChest},
 	1401336: {1401336, "Hidden Cube", radarCategoryChest},
 	3682560: {3682560, "Special Hidden Cube", radarCategoryChest},
+
+	// Interactive Supply / Field Chests
+	2900100: {2900100, "Supply Chest", radarCategoryChest},
+	2900101: {2900101, "Supply Chest", radarCategoryChest},
+	2900102: {2900102, "Supply Chest", radarCategoryChest},
+	2900200: {2900200, "Supply Chest", radarCategoryChest},
+	2900201: {2900201, "Treasure Chest", radarCategoryChest},
+	2920100: {2920100, "Supply Chest", radarCategoryChest},
+
+	// Odyle / Odylium / Crystals (GatherSource & World Entities)
+	1080001: {1080001, "Odyle", radarCategoryOdyle},
+	1080002: {1080002, "Fine Odyle", radarCategoryOdyle},
+	1080003: {1080003, "Pure Odyle", radarCategoryOdyle},
+	1080004: {1080004, "Radiant Odyle", radarCategoryOdyle},
+	1090001: {1090001, "Odyle", radarCategoryOdyle},
+	1090002: {1090002, "Fine Odyle", radarCategoryOdyle},
+	1090003: {1090003, "Pure Odyle", radarCategoryOdyle},
+	1090004: {1090004, "Radiant Odyle", radarCategoryOdyle},
+	1580001: {1580001, "Odyle", radarCategoryOdyle},
+	1580002: {1580002, "Fine Odyle", radarCategoryOdyle},
+	1580003: {1580003, "Pure Odyle", radarCategoryOdyle},
+	1590001: {1590001, "Odyle", radarCategoryOdyle},
+	2000001: {2000001, "Odyle", radarCategoryOdyle},
+	2920213: {2920213, "Odylium Ore", radarCategoryOdyle},
+	2920225: {2920225, "Odylium Ore", radarCategoryOdyle},
+	2920303: {2920303, "Odylium Ore", radarCategoryOdyle},
+	2920703: {2920703, "Odylium Ore", radarCategoryOdyle},
+	2921409: {2921409, "Odylium Ore", radarCategoryOdyle},
+	2000791: {2000791, "Crystal", radarCategoryOdyle},
+	2000871: {2000871, "Crystal", radarCategoryOdyle},
+	2301319: {2301319, "Crystal", radarCategoryOdyle},
+	2311319: {2311319, "Crystal", radarCategoryOdyle},
+	2321319: {2321319, "Crystal", radarCategoryOdyle},
+	2921332: {2921332, "Atheron's Crystal", radarCategoryOdyle},
+	2921333: {2921333, "Atheron's Crystal", radarCategoryOdyle},
+
+	// Gems (Gemas): Sapphire, Ruby, Diamond, Tourmaline, Veil Jewel
+	1080501: {1080501, "Sapphire Gemstone", radarCategoryGem},
+	1080504: {1080504, "Fine Sapphire Gemstone", radarCategoryGem},
+	1080507: {1080507, "Pure Sapphire Gemstone", radarCategoryGem},
+	1080510: {1080510, "Radiant Sapphire Gemstone", radarCategoryGem},
+	1090501: {1090501, "Sapphire Gemstone", radarCategoryGem},
+	1090504: {1090504, "Fine Sapphire Gemstone", radarCategoryGem},
+	1090507: {1090507, "Pure Sapphire Gemstone", radarCategoryGem},
+	1090510: {1090510, "Radiant Sapphire Gemstone", radarCategoryGem},
+	1080502: {1080502, "Diamond Gemstone", radarCategoryGem},
+	1080505: {1080505, "Fine Diamond Gemstone", radarCategoryGem},
+	1080508: {1080508, "Pure Diamond Gemstone", radarCategoryGem},
+	1080511: {1080511, "Radiant Diamond Gemstone", radarCategoryGem},
+	1090502: {1090502, "Diamond Gemstone", radarCategoryGem},
+	1090505: {1090505, "Fine Diamond Gemstone", radarCategoryGem},
+	1090508: {1090508, "Pure Diamond Gemstone", radarCategoryGem},
+	1090511: {1090511, "Radiant Diamond Gemstone", radarCategoryGem},
+	1080503: {1080503, "Ruby Gemstone", radarCategoryGem},
+	1080506: {1080506, "Fine Ruby Gemstone", radarCategoryGem},
+	1080509: {1080509, "Pure Ruby Gemstone", radarCategoryGem},
+	1080512: {1080512, "Radiant Ruby Gemstone", radarCategoryGem},
+	1090503: {1090503, "Ruby Gemstone", radarCategoryGem},
+	1090506: {1090506, "Fine Ruby Gemstone", radarCategoryGem},
+	1090509: {1090509, "Pure Ruby Gemstone", radarCategoryGem},
+	1090512: {1090512, "Radiant Ruby Gemstone", radarCategoryGem},
+	2300254: {2300254, "Floating Tourmaline", radarCategoryGem},
+	2300255: {2300255, "Floating Tourmaline", radarCategoryGem},
+	2300264: {2300264, "Floating Tourmaline", radarCategoryGem},
+	2300817: {2300817, "Floating Tourmaline", radarCategoryGem},
+	2300818: {2300818, "Floating Tourmaline", radarCategoryGem},
+	2590112: {2590112, "Veil Jewel", radarCategoryGem},
+	2590224: {2590224, "Veil Jewel", radarCategoryGem},
+
+	// Ores (Minerales): Orichalcum Ore
+	1080101: {1080101, "Orichalcum Ore", radarCategoryOre},
+	1080102: {1080102, "Fine Orichalcum Ore", radarCategoryOre},
+	1080103: {1080103, "Pure Orichalcum Ore", radarCategoryOre},
+	1080104: {1080104, "Radiant Orichalcum Ore", radarCategoryOre},
+	1080401: {1080401, "Orichalcum Ore", radarCategoryOre},
+	1080402: {1080402, "Fine Orichalcum Ore", radarCategoryOre},
+	1080403: {1080403, "Pure Orichalcum Ore", radarCategoryOre},
+	1080404: {1080404, "Radiant Orichalcum Ore", radarCategoryOre},
+	1090101: {1090101, "Orichalcum Ore", radarCategoryOre},
+	1090102: {1090102, "Fine Orichalcum Ore", radarCategoryOre},
+	1090103: {1090103, "Pure Orichalcum Ore", radarCategoryOre},
+	1090104: {1090104, "Radiant Orichalcum Ore", radarCategoryOre},
+	1090401: {1090401, "Orichalcum Ore", radarCategoryOre},
+	1090402: {1090402, "Fine Orichalcum Ore", radarCategoryOre},
+	1090403: {1090403, "Pure Orichalcum Ore", radarCategoryOre},
+	1090404: {1090404, "Radiant Orichalcum Ore", radarCategoryOre},
+
+	// Wood / Logs (Madera): Asvata Log, Yggdrasil Log
+	1080201: {1080201, "Yggdrasil Log", radarCategoryWood},
+	1080202: {1080202, "Fine Yggdrasil Log", radarCategoryWood},
+	1080203: {1080203, "Pure Yggdrasil Log", radarCategoryWood},
+	1080204: {1080204, "Radiant Yggdrasil Log", radarCategoryWood},
+	1080301: {1080301, "Yggdrasil Log", radarCategoryWood},
+	1080302: {1080302, "Fine Yggdrasil Log", radarCategoryWood},
+	1080303: {1080303, "Pure Yggdrasil Log", radarCategoryWood},
+	1080304: {1080304, "Radiant Yggdrasil Log", radarCategoryWood},
+	1090201: {1090201, "Asvata Log", radarCategoryWood},
+	1090202: {1090202, "Fine Asvata Log", radarCategoryWood},
+	1090203: {1090203, "Pure Asvata Log", radarCategoryWood},
+	1090204: {1090204, "Radiant Asvata Log", radarCategoryWood},
+	1090301: {1090301, "Asvata Log", radarCategoryWood},
+	1090302: {1090302, "Fine Asvata Log", radarCategoryWood},
+	1090303: {1090303, "Pure Asvata Log", radarCategoryWood},
+	1090304: {1090304, "Radiant Asvata Log", radarCategoryWood},
+
+	// Herbs & Plants (Hierbas / Flores / Ingredientes): Azpha, Calendula, Aria, Targena, etc.
+	1080601: {1080601, "Aria", radarCategoryHerb},
+	1080603: {1080603, "Fresh Aria", radarCategoryHerb},
+	1080605: {1080605, "Aria", radarCategoryHerb},
+	1080607: {1080607, "Fresh Aria", radarCategoryHerb},
+	1080602: {1080602, "Targena", radarCategoryHerb},
+	1080604: {1080604, "Targena", radarCategoryHerb},
+	1080606: {1080606, "Fresh Targena", radarCategoryHerb},
+	1080608: {1080608, "Fresh Targena", radarCategoryHerb},
+	1090601: {1090601, "Azpha", radarCategoryHerb},
+	1090603: {1090603, "Fresh Azpha", radarCategoryHerb},
+	1090605: {1090605, "Azpha", radarCategoryHerb},
+	1090607: {1090607, "Fresh Azpha", radarCategoryHerb},
+	1090602: {1090602, "Calendula", radarCategoryHerb},
+	1090604: {1090604, "Fresh Calendula", radarCategoryHerb},
+	1090606: {1090606, "Calendula", radarCategoryHerb},
+	1090608: {1090608, "Fresh Calendula", radarCategoryHerb},
+	1081001: {1081001, "Mela", radarCategoryHerb},
+	1081007: {1081007, "Mela", radarCategoryHerb},
+	1081013: {1081013, "Mela", radarCategoryHerb},
+	1081002: {1081002, "Coriolus", radarCategoryHerb},
+	1081008: {1081008, "Coriolus", radarCategoryHerb},
+	1081014: {1081014, "Coriolus", radarCategoryHerb},
+	1081003: {1081003, "Inina", radarCategoryHerb},
+	1081009: {1081009, "Inina", radarCategoryHerb},
+	1081015: {1081015, "Inina", radarCategoryHerb},
+	1081004: {1081004, "Cypri", radarCategoryHerb},
+	1081010: {1081010, "Cypri", radarCategoryHerb},
+	1081016: {1081016, "Cypri", radarCategoryHerb},
+	1081019: {1081019, "Cypri", radarCategoryHerb},
+	1081006: {1081006, "Kukuru", radarCategoryHerb},
+	1081012: {1081012, "Kukuru", radarCategoryHerb},
+	1081018: {1081018, "Kukuru", radarCategoryHerb},
+	1081021: {1081021, "Kukuru", radarCategoryHerb},
+	1091001: {1091001, "Raydam", radarCategoryHerb},
+	1091007: {1091007, "Raydam", radarCategoryHerb},
+	1091013: {1091013, "Raydam", radarCategoryHerb},
+	1091002: {1091002, "Morfa", radarCategoryHerb},
+	1091008: {1091008, "Morfa", radarCategoryHerb},
+	1091014: {1091014, "Morfa", radarCategoryHerb},
+	1091003: {1091003, "Conide", radarCategoryHerb},
+	1091009: {1091009, "Conide", radarCategoryHerb},
+	1091015: {1091015, "Conide", radarCategoryHerb},
+	1091004: {1091004, "Pujery", radarCategoryHerb},
+	1091010: {1091010, "Pujery", radarCategoryHerb},
+	1091016: {1091016, "Pujery", radarCategoryHerb},
+	1091019: {1091019, "Pujery", radarCategoryHerb},
+	1091006: {1091006, "Ohkra", radarCategoryHerb},
+	1091012: {1091012, "Ohkra", radarCategoryHerb},
+	1091018: {1091018, "Ohkra", radarCategoryHerb},
+	1091021: {1091021, "Ohkra", radarCategoryHerb},
 }
 
 func validWorldCoord(v float32) bool {
@@ -147,7 +303,7 @@ func readVec3LE(b []byte) (game.Pos, bool) {
 }
 
 func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, radarCategory, bool) {
-	// 1. Direct catalog lookup for confirmed Hidden Cubes
+	// 1. Direct catalog lookup for confirmed Cubes, Chests and GatherSource resources
 	if def, ok := radarCatalog[code]; ok {
 		name := def.Name
 		if inlineName != "" {
@@ -155,21 +311,57 @@ func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, r
 		}
 		return name, def.Category, true
 	}
-	// 2. Exact keyword match in inlineName for Hidden Cubes / Chests
+	// 2. Exact keyword match in inlineName for Cubes and Gathering Nodes
 	lower := strings.ToLower(inlineName)
 	if lower != "" {
-		if strings.Contains(lower, "cube") || strings.Contains(lower, "cubo") ||
+		switch {
+		case strings.Contains(lower, "cube") || strings.Contains(lower, "cubo") ||
 			strings.Contains(lower, "hidden") || strings.Contains(lower, "oculto") ||
 			strings.Contains(lower, "chest") || strings.Contains(lower, "supply") ||
 			strings.Contains(lower, "cofre") || strings.Contains(lower, "suministro") ||
 			strings.Contains(lower, "treasure") || strings.Contains(lower, "tesoro") ||
 			strings.Contains(lower, "relic") || strings.Contains(lower, "box") ||
 			strings.Contains(lower, "caja") || strings.Contains(lower, "큐브") ||
-			strings.Contains(lower, "상자") || strings.Contains(lower, "보급") {
+			strings.Contains(lower, "상자") || strings.Contains(lower, "보급"):
 			return inlineName, radarCategoryChest, true
+
+		case strings.Contains(lower, "orichalcum") || strings.Contains(lower, "ore") ||
+			strings.Contains(lower, "vein") || strings.Contains(lower, "mineral") ||
+			strings.Contains(lower, "oricalco") || strings.Contains(lower, "광석"):
+			return inlineName, radarCategoryOre, true
+
+		case strings.Contains(lower, "herb") || strings.Contains(lower, "azpha") ||
+			strings.Contains(lower, "calendula") || strings.Contains(lower, "aria") ||
+			strings.Contains(lower, "targena") || strings.Contains(lower, "pujery") ||
+			strings.Contains(lower, "conide") || strings.Contains(lower, "ohkra") ||
+			strings.Contains(lower, "morfa") || strings.Contains(lower, "raydam") ||
+			strings.Contains(lower, "mela") || strings.Contains(lower, "coriolus") ||
+			strings.Contains(lower, "inina") || strings.Contains(lower, "cypri") ||
+			strings.Contains(lower, "kukuru") || strings.Contains(lower, "hierba") ||
+			strings.Contains(lower, "plant") || strings.Contains(lower, "약초"):
+			return inlineName, radarCategoryHerb, true
+
+		case strings.Contains(lower, "sapphire") || strings.Contains(lower, "ruby") ||
+			strings.Contains(lower, "diamond") || strings.Contains(lower, "gem") ||
+			strings.Contains(lower, "tourmaline") || strings.Contains(lower, "jewel") ||
+			strings.Contains(lower, "zafiro") || strings.Contains(lower, "rubí") ||
+			strings.Contains(lower, "diamante") || strings.Contains(lower, "gema") ||
+			strings.Contains(lower, "보석"):
+			return inlineName, radarCategoryGem, true
+
+		case strings.Contains(lower, "log") || strings.Contains(lower, "asvata") ||
+			strings.Contains(lower, "yggdrasil") || strings.Contains(lower, "tree") ||
+			strings.Contains(lower, "wood") || strings.Contains(lower, "tronco") ||
+			strings.Contains(lower, "madera") || strings.Contains(lower, "목재"):
+			return inlineName, radarCategoryWood, true
+
+		case strings.Contains(lower, "odyle") || strings.Contains(lower, "odylium") ||
+			strings.Contains(lower, "odil") || strings.Contains(lower, "aether") ||
+			strings.Contains(lower, "오드"):
+			return inlineName, radarCategoryOdyle, true
 		}
 	}
-	// Only cubes/chests are tracked on radar. Ignore all resources and background objects.
+	// Any non-catalog NPC, monster or decorative object is ignored to prevent clutter
 	return "", "", false
 }
 
