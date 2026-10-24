@@ -79,16 +79,16 @@ Window {
             CheckBox {objectName: "radarSimpleModeToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#54cf82"; text: "Modo sencillo (Solo texto/alerta: hay un cubo a X metros, enfrente/atrás/izq/der/arriba/abajo)"; checked: backend.radarSimpleMode; onToggled: backend.radarSimpleMode = checked}
             RowLayout {
                 Layout.leftMargin: 20; visible: backend.radarEnabled
-                CheckBox {objectName: "radarSoundToggle"; palette.windowText: "#f2c15a"; text: "Sonido al detectar un cubo o recurso nuevo"; checked: backend.radarSound; onToggled: backend.radarSound = checked}
+                CheckBox {objectName: "radarSoundToggle"; palette.windowText: "#f2c15a"; text: "Sonido al detectar un cubo nuevo"; checked: backend.radarSound; onToggled: backend.radarSound = checked}
                 Button {text: "Probar"; onClicked: backend.playAlertSound("cube")}
             }
-            CheckBox {objectName: "radarChestsToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#f2c15a"; text: "Rastrear Hidden Cubes y Cofres"; checked: backend.radarChests; onToggled: backend.radarChests = checked}
-            CheckBox {objectName: "radarOresToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#ff9f5a"; text: "Rastrear Minería (Minerales de Oricalco)"; checked: backend.radarOres; onToggled: backend.radarOres = checked}
-            CheckBox {objectName: "radarHerbsToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#7be35a"; text: "Rastrear Herboristería (Plantas y Flores)"; checked: backend.radarHerbs; onToggled: backend.radarHerbs = checked}
-            CheckBox {objectName: "radarGemsToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#e082ff"; text: "Rastrear Joyería / Gemas (Zafiro, Diamante, Rubí)"; checked: backend.radarGems; onToggled: backend.radarGems = checked}
-            CheckBox {objectName: "radarWoodToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#c89b6e"; text: "Rastrear Tala / Madera (Asvata, Yggdrasil)"; checked: backend.radarWood; onToggled: backend.radarWood = checked}
-            CheckBox {objectName: "radarOdyleToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#6be0ff"; text: "Rastrear Extracción de Odyle / Cristales"; checked: backend.radarOdyle; onToggled: backend.radarOdyle = checked}
-            CheckBox {objectName: "radarOtherToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#c0cbdc"; text: "Rastrear Otros Objetos del Mundo"; checked: backend.radarOther; onToggled: backend.radarOther = checked}
+            CheckBox {objectName: "radarChestsToggle"; Layout.leftMargin: 20; visible: backend.radarEnabled; palette.windowText: "#f2c15a"; text: "Rastrear Hidden Cubes"; checked: backend.radarChests; onToggled: backend.radarChests = checked}
+            CheckBox {objectName: "radarOdyleToggle"; visible: false; checked: false; onToggled: backend.radarOdyle = checked}
+            CheckBox {objectName: "radarGemsToggle"; visible: false; checked: false; onToggled: backend.radarGems = checked}
+            CheckBox {objectName: "radarOresToggle"; visible: false; checked: false; onToggled: backend.radarOres = checked}
+            CheckBox {objectName: "radarHerbsToggle"; visible: false; checked: false; onToggled: backend.radarHerbs = checked}
+            CheckBox {objectName: "radarWoodToggle"; visible: false; checked: false; onToggled: backend.radarWood = checked}
+            CheckBox {objectName: "radarOtherToggle"; visible: false; checked: false; onToggled: backend.radarOther = checked}
             Label {text: "PvP Duel / Combate entre Jugadores"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}
             CheckBox {objectName: "pvpEnabledToggle"; palette.windowText: "#e6edf6"; text: "Activar modo PvP (barra de rivales, daño recibido vs infligido y duelo)"; checked: backend.pvpEnabled; onToggled: backend.pvpEnabled = checked}
             Label {text: "Alertas y Horarios de Eventos Aion 2"; color: "#9ad9ec"; font.bold: true; Layout.topMargin: 10}

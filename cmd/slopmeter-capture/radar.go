@@ -47,7 +47,6 @@ type radarEntity struct {
 
 type radarState struct {
 	entities   map[game.Entity]*radarEntity
-	mapID      uint32
 	selfPos    game.Pos
 	hasSelfPos bool
 	headingX   float32
@@ -119,223 +118,6 @@ var radarCatalog = map[uint32]radarDefinition{
 	1401335: {1401335, "Hidden Cube", radarCategoryChest},
 	1401336: {1401336, "Hidden Cube", radarCategoryChest},
 	3682560: {3682560, "Special Hidden Cube", radarCategoryChest},
-
-	// World Gathering Nodes (Sammelpunkte - verified in captures / client)
-	1500000: {1500000, "Orichalcum Ore / Mineral de oricalco", radarCategoryOre},
-	1500012: {1500012, "Orichalcum Ore / Mineral de oricalco", radarCategoryOre},
-	1200611: {1200611, "Orichalcum Ore / Mineral de oricalco", radarCategoryOre},
-	1500041: {1500041, "Coriolus / Coriolo", radarCategoryHerb},
-	1100001: {1100001, "Azpha / Azfa", radarCategoryHerb},
-	1200860: {1200860, "Odyle / Odile", radarCategoryOdyle},
-
-	// Crafting & Resource items from recipes.json
-	610620013: {610620013, "Mineral de oricalco", radarCategoryOre},
-	610620014: {610620014, "Mineral fino de oricalco", radarCategoryOre},
-	610620015: {610620015, "Mineral de oricalco puro", radarCategoryOre},
-	610620016: {610620016, "Mineral de oricalco radiante", radarCategoryOre},
-
-	610610013: {610610013, "Odyle", radarCategoryOdyle},
-	610610014: {610610014, "Odyle fino", radarCategoryOdyle},
-	610610015: {610610015, "Odyle puro", radarCategoryOdyle},
-	610610016: {610610016, "Odyle radiante", radarCategoryOdyle},
-
-	610650011: {610650011, "Tronco de Yggdrasil", radarCategoryWood},
-	610650012: {610650012, "Registro de Asvata", radarCategoryWood},
-	610650013: {610650013, "Tronco fino de Yggdrasil", radarCategoryWood},
-	610650014: {610650014, "Registro fino de Asvata", radarCategoryWood},
-	610650015: {610650015, "Tronco de Yggdrasil puro", radarCategoryWood},
-	610650016: {610650016, "Registro puro de Asvata", radarCategoryWood},
-	610650017: {610650017, "Tronco de Yggdrasil radiante", radarCategoryWood},
-	610650018: {610650018, "Registro radiante de Asvata", radarCategoryWood},
-
-	610660025: {610660025, "Piedra preciosa de zafiro", radarCategoryGem},
-	610660026: {610660026, "Piedra preciosa de diamante", radarCategoryGem},
-	610660027: {610660027, "Piedra preciosa de rubí", radarCategoryGem},
-	610660028: {610660028, "Piedra preciosa de zafiro fino", radarCategoryGem},
-	610660029: {610660029, "Piedra preciosa de diamante fino", radarCategoryGem},
-	610660030: {610660030, "Piedra preciosa de rubí fina", radarCategoryGem},
-	610660031: {610660031, "Piedra preciosa de zafiro puro", radarCategoryGem},
-	610660032: {610660032, "Piedra preciosa de diamante puro", radarCategoryGem},
-	610660033: {610660033, "Piedra preciosa de rubí puro", radarCategoryGem},
-	610660034: {610660034, "Piedra preciosa de zafiro radiante", radarCategoryGem},
-	610660035: {610660035, "Piedra preciosa de diamante radiante", radarCategoryGem},
-	610660036: {610660036, "Piedra preciosa de rubí radiante", radarCategoryGem},
-
-	610670041: {610670041, "Aria", radarCategoryHerb},
-	610670042: {610670042, "Targena", radarCategoryHerb},
-	610670043: {610670043, "Azfa", radarCategoryHerb},
-	610670044: {610670044, "Caléndula", radarCategoryHerb},
-	610670045: {610670045, "Aria fresca", radarCategoryHerb},
-	610670046: {610670046, "Targena fresca", radarCategoryHerb},
-	610670047: {610670047, "Azfa fresca", radarCategoryHerb},
-	610670048: {610670048, "Caléndula fresca", radarCategoryHerb},
-
-	610680043: {610680043, "Coriolo", radarCategoryHerb},
-	610680044: {610680044, "Kukuru", radarCategoryHerb},
-	610680045: {610680045, "Mela", radarCategoryHerb},
-	610680047: {610680047, "Inina", radarCategoryHerb},
-	610680048: {610680048, "Chipriota", radarCategoryHerb},
-	610680049: {610680049, "Morfa", radarCategoryHerb},
-	610680050: {610680050, "Ohkra", radarCategoryHerb},
-	610680051: {610680051, "Raydam", radarCategoryHerb},
-	610680053: {610680053, "Conide", radarCategoryHerb},
-	610680054: {610680054, "Pujery", radarCategoryHerb},
-
-	// Interactive Supply / Field Chests
-	2900100: {2900100, "Supply Chest", radarCategoryChest},
-	2900101: {2900101, "Supply Chest", radarCategoryChest},
-	2900102: {2900102, "Supply Chest", radarCategoryChest},
-	2900200: {2900200, "Supply Chest", radarCategoryChest},
-	2900201: {2900201, "Treasure Chest", radarCategoryChest},
-	2920100: {2920100, "Supply Chest", radarCategoryChest},
-
-	// Odyle / Odylium / Crystals (GatherSource & World Entities)
-	1080001: {1080001, "Odyle", radarCategoryOdyle},
-	1080002: {1080002, "Fine Odyle", radarCategoryOdyle},
-	1080003: {1080003, "Pure Odyle", radarCategoryOdyle},
-	1080004: {1080004, "Radiant Odyle", radarCategoryOdyle},
-	1090001: {1090001, "Odyle", radarCategoryOdyle},
-	1090002: {1090002, "Fine Odyle", radarCategoryOdyle},
-	1090003: {1090003, "Pure Odyle", radarCategoryOdyle},
-	1090004: {1090004, "Radiant Odyle", radarCategoryOdyle},
-	1580001: {1580001, "Odyle", radarCategoryOdyle},
-	1580002: {1580002, "Fine Odyle", radarCategoryOdyle},
-	1580003: {1580003, "Pure Odyle", radarCategoryOdyle},
-	1590001: {1590001, "Odyle", radarCategoryOdyle},
-	2000001: {2000001, "Odyle", radarCategoryOdyle},
-	2920213: {2920213, "Odylium Ore", radarCategoryOdyle},
-	2920225: {2920225, "Odylium Ore", radarCategoryOdyle},
-	2920303: {2920303, "Odylium Ore", radarCategoryOdyle},
-	2920703: {2920703, "Odylium Ore", radarCategoryOdyle},
-	2921409: {2921409, "Odylium Ore", radarCategoryOdyle},
-	2000791: {2000791, "Crystal", radarCategoryOdyle},
-	2000871: {2000871, "Crystal", radarCategoryOdyle},
-	2301319: {2301319, "Crystal", radarCategoryOdyle},
-	2311319: {2311319, "Crystal", radarCategoryOdyle},
-	2321319: {2321319, "Crystal", radarCategoryOdyle},
-	2921332: {2921332, "Atheron's Crystal", radarCategoryOdyle},
-	2921333: {2921333, "Atheron's Crystal", radarCategoryOdyle},
-
-	// Gems (Gemas): Sapphire, Ruby, Diamond, Tourmaline, Veil Jewel
-	1080501: {1080501, "Sapphire Gemstone", radarCategoryGem},
-	1080504: {1080504, "Fine Sapphire Gemstone", radarCategoryGem},
-	1080507: {1080507, "Pure Sapphire Gemstone", radarCategoryGem},
-	1080510: {1080510, "Radiant Sapphire Gemstone", radarCategoryGem},
-	1090501: {1090501, "Sapphire Gemstone", radarCategoryGem},
-	1090504: {1090504, "Fine Sapphire Gemstone", radarCategoryGem},
-	1090507: {1090507, "Pure Sapphire Gemstone", radarCategoryGem},
-	1090510: {1090510, "Radiant Sapphire Gemstone", radarCategoryGem},
-	1080502: {1080502, "Diamond Gemstone", radarCategoryGem},
-	1080505: {1080505, "Fine Diamond Gemstone", radarCategoryGem},
-	1080508: {1080508, "Pure Diamond Gemstone", radarCategoryGem},
-	1080511: {1080511, "Radiant Diamond Gemstone", radarCategoryGem},
-	1090502: {1090502, "Diamond Gemstone", radarCategoryGem},
-	1090505: {1090505, "Fine Diamond Gemstone", radarCategoryGem},
-	1090508: {1090508, "Pure Diamond Gemstone", radarCategoryGem},
-	1090511: {1090511, "Radiant Diamond Gemstone", radarCategoryGem},
-	1080503: {1080503, "Ruby Gemstone", radarCategoryGem},
-	1080506: {1080506, "Fine Ruby Gemstone", radarCategoryGem},
-	1080509: {1080509, "Pure Ruby Gemstone", radarCategoryGem},
-	1080512: {1080512, "Radiant Ruby Gemstone", radarCategoryGem},
-	1090503: {1090503, "Ruby Gemstone", radarCategoryGem},
-	1090506: {1090506, "Fine Ruby Gemstone", radarCategoryGem},
-	1090509: {1090509, "Pure Ruby Gemstone", radarCategoryGem},
-	1090512: {1090512, "Radiant Ruby Gemstone", radarCategoryGem},
-	2300254: {2300254, "Floating Tourmaline", radarCategoryGem},
-	2300255: {2300255, "Floating Tourmaline", radarCategoryGem},
-	2300264: {2300264, "Floating Tourmaline", radarCategoryGem},
-	2300817: {2300817, "Floating Tourmaline", radarCategoryGem},
-	2300818: {2300818, "Floating Tourmaline", radarCategoryGem},
-	2590112: {2590112, "Veil Jewel", radarCategoryGem},
-	2590224: {2590224, "Veil Jewel", radarCategoryGem},
-
-	// Ores (Minerales): Orichalcum Ore
-	1080101: {1080101, "Orichalcum Ore", radarCategoryOre},
-	1080102: {1080102, "Fine Orichalcum Ore", radarCategoryOre},
-	1080103: {1080103, "Pure Orichalcum Ore", radarCategoryOre},
-	1080104: {1080104, "Radiant Orichalcum Ore", radarCategoryOre},
-	1080401: {1080401, "Orichalcum Ore", radarCategoryOre},
-	1080402: {1080402, "Fine Orichalcum Ore", radarCategoryOre},
-	1080403: {1080403, "Pure Orichalcum Ore", radarCategoryOre},
-	1080404: {1080404, "Radiant Orichalcum Ore", radarCategoryOre},
-	1090101: {1090101, "Orichalcum Ore", radarCategoryOre},
-	1090102: {1090102, "Fine Orichalcum Ore", radarCategoryOre},
-	1090103: {1090103, "Pure Orichalcum Ore", radarCategoryOre},
-	1090104: {1090104, "Radiant Orichalcum Ore", radarCategoryOre},
-	1090401: {1090401, "Orichalcum Ore", radarCategoryOre},
-	1090402: {1090402, "Fine Orichalcum Ore", radarCategoryOre},
-	1090403: {1090403, "Pure Orichalcum Ore", radarCategoryOre},
-	1090404: {1090404, "Radiant Orichalcum Ore", radarCategoryOre},
-
-	// Wood / Logs (Madera): Asvata Log, Yggdrasil Log
-	1080201: {1080201, "Yggdrasil Log", radarCategoryWood},
-	1080202: {1080202, "Fine Yggdrasil Log", radarCategoryWood},
-	1080203: {1080203, "Pure Yggdrasil Log", radarCategoryWood},
-	1080204: {1080204, "Radiant Yggdrasil Log", radarCategoryWood},
-	1080301: {1080301, "Yggdrasil Log", radarCategoryWood},
-	1080302: {1080302, "Fine Yggdrasil Log", radarCategoryWood},
-	1080303: {1080303, "Pure Yggdrasil Log", radarCategoryWood},
-	1080304: {1080304, "Radiant Yggdrasil Log", radarCategoryWood},
-	1090201: {1090201, "Asvata Log", radarCategoryWood},
-	1090202: {1090202, "Fine Asvata Log", radarCategoryWood},
-	1090203: {1090203, "Pure Asvata Log", radarCategoryWood},
-	1090204: {1090204, "Radiant Asvata Log", radarCategoryWood},
-	1090301: {1090301, "Asvata Log", radarCategoryWood},
-	1090302: {1090302, "Fine Asvata Log", radarCategoryWood},
-	1090303: {1090303, "Pure Asvata Log", radarCategoryWood},
-	1090304: {1090304, "Radiant Asvata Log", radarCategoryWood},
-
-	// Herbs & Plants (Hierbas / Flores / Ingredientes): Azpha, Calendula, Aria, Targena, etc.
-	1080601: {1080601, "Aria", radarCategoryHerb},
-	1080603: {1080603, "Fresh Aria", radarCategoryHerb},
-	1080605: {1080605, "Aria", radarCategoryHerb},
-	1080607: {1080607, "Fresh Aria", radarCategoryHerb},
-	1080602: {1080602, "Targena", radarCategoryHerb},
-	1080604: {1080604, "Targena", radarCategoryHerb},
-	1080606: {1080606, "Fresh Targena", radarCategoryHerb},
-	1080608: {1080608, "Fresh Targena", radarCategoryHerb},
-	1090601: {1090601, "Azpha", radarCategoryHerb},
-	1090603: {1090603, "Fresh Azpha", radarCategoryHerb},
-	1090605: {1090605, "Azpha", radarCategoryHerb},
-	1090607: {1090607, "Fresh Azpha", radarCategoryHerb},
-	1090602: {1090602, "Calendula", radarCategoryHerb},
-	1090604: {1090604, "Fresh Calendula", radarCategoryHerb},
-	1090606: {1090606, "Calendula", radarCategoryHerb},
-	1090608: {1090608, "Fresh Calendula", radarCategoryHerb},
-	1081001: {1081001, "Mela", radarCategoryHerb},
-	1081007: {1081007, "Mela", radarCategoryHerb},
-	1081013: {1081013, "Mela", radarCategoryHerb},
-	1081002: {1081002, "Coriolus", radarCategoryHerb},
-	1081008: {1081008, "Coriolus", radarCategoryHerb},
-	1081014: {1081014, "Coriolus", radarCategoryHerb},
-	1081003: {1081003, "Inina", radarCategoryHerb},
-	1081009: {1081009, "Inina", radarCategoryHerb},
-	1081015: {1081015, "Inina", radarCategoryHerb},
-	1081004: {1081004, "Cypri", radarCategoryHerb},
-	1081010: {1081010, "Cypri", radarCategoryHerb},
-	1081016: {1081016, "Cypri", radarCategoryHerb},
-	1081019: {1081019, "Cypri", radarCategoryHerb},
-	1081006: {1081006, "Kukuru", radarCategoryHerb},
-	1081012: {1081012, "Kukuru", radarCategoryHerb},
-	1081018: {1081018, "Kukuru", radarCategoryHerb},
-	1081021: {1081021, "Kukuru", radarCategoryHerb},
-	1091001: {1091001, "Raydam", radarCategoryHerb},
-	1091007: {1091007, "Raydam", radarCategoryHerb},
-	1091013: {1091013, "Raydam", radarCategoryHerb},
-	1091002: {1091002, "Morfa", radarCategoryHerb},
-	1091008: {1091008, "Morfa", radarCategoryHerb},
-	1091014: {1091014, "Morfa", radarCategoryHerb},
-	1091003: {1091003, "Conide", radarCategoryHerb},
-	1091009: {1091009, "Conide", radarCategoryHerb},
-	1091015: {1091015, "Conide", radarCategoryHerb},
-	1091004: {1091004, "Pujery", radarCategoryHerb},
-	1091010: {1091010, "Pujery", radarCategoryHerb},
-	1091016: {1091016, "Pujery", radarCategoryHerb},
-	1091019: {1091019, "Pujery", radarCategoryHerb},
-	1091006: {1091006, "Ohkra", radarCategoryHerb},
-	1091012: {1091012, "Ohkra", radarCategoryHerb},
-	1091018: {1091018, "Ohkra", radarCategoryHerb},
-	1091021: {1091021, "Ohkra", radarCategoryHerb},
 }
 
 func validWorldCoord(v float32) bool {
@@ -364,107 +146,16 @@ func readVec3LE(b []byte) (game.Pos, bool) {
 	return p, validWorldPos(p)
 }
 
-func classifyByTemplateRange(code uint32) (string, radarCategory, bool) {
-	switch {
-	// Hidden Cubes (Poeta, Verteron, Eltnen, Morheim, Beluslan, Special) & Field Chests
-	case (code >= 1000290 && code <= 1000299) || (code >= 1000540 && code <= 1000570):
-		return "Hidden Cube", radarCategoryChest, true
-	case (code >= 1100050 && code <= 1100100):
-		return "Hidden Cube", radarCategoryChest, true
-	case (code >= 1200010 && code <= 1200045) || (code >= 1200660 && code <= 1200715) || (code >= 1201050 && code <= 1201060):
-		return "Hidden Cube", radarCategoryChest, true
-	case (code >= 1300080 && code <= 1300085) || (code >= 1300750 && code <= 1300760) || (code >= 1301195 && code <= 1301205):
-		return "Asmodian Hidden Cube", radarCategoryChest, true
-	case (code >= 1401330 && code <= 1401340):
-		return "Hidden Cube", radarCategoryChest, true
-	case code >= 3680000 && code <= 3689999:
-		return "Special Hidden Cube", radarCategoryChest, true
-	case (code >= 2900100 && code <= 2900250) || (code >= 2920100 && code <= 2920110):
-		return "Supply Chest", radarCategoryChest, true
-
-	// Odyle / Aether / Crystals
-	case (code >= 1080000 && code <= 1080099) || (code >= 1090000 && code <= 1090099):
-		return "Odyle", radarCategoryOdyle, true
-	case (code >= 1580000 && code <= 1590099) || (code >= 2000000 && code <= 2000099):
-		return "Odyle", radarCategoryOdyle, true
-	case (code >= 2000700 && code <= 2000899) || (code >= 2301300 && code <= 2321399) || (code >= 2921300 && code <= 2921399):
-		return "Crystal", radarCategoryOdyle, true
-	case (code >= 2920210 && code <= 2920230) || (code >= 2920300 && code <= 2920310) || (code >= 2920700 && code <= 2920710) || (code >= 2921400 && code <= 2921420):
-		return "Odylium Ore", radarCategoryOdyle, true
-
-	// Ores / Minerals (Minería): Iron, Titanium, Adamantium, Mithril, Orichalcum
-	case (code >= 1080100 && code <= 1080199) || (code >= 1080400 && code <= 1080499) || (code >= 1081100 && code <= 1081499):
-		return "Orichalcum Ore", radarCategoryOre, true
-	case (code >= 1090100 && code <= 1090199) || (code >= 1090400 && code <= 1090499) || (code >= 1091100 && code <= 1091499):
-		return "Orichalcum Ore", radarCategoryOre, true
-	case (code >= 2000100 && code <= 2000199) || (code >= 2000400 && code <= 2000499) || (code >= 2001100 && code <= 2001499):
-		return "Iron Ore", radarCategoryOre, true
-	case (code >= 2100100 && code <= 2100199) || (code >= 2100400 && code <= 2100499) || (code >= 2101100 && code <= 2101499):
-		return "Titanium Ore", radarCategoryOre, true
-	case (code >= 2200100 && code <= 2200199) || (code >= 2200400 && code <= 2200499) || (code >= 2300100 && code <= 2300199) || (code >= 2920320 && code <= 2920499) || (code >= 2921100 && code <= 2921399):
-		return "Adamantium Ore", radarCategoryOre, true
-
-	// Gems / Jewels (Gemas): Sapphire, Diamond, Ruby, Tourmaline, Veil Jewel
-	case (code >= 1080500 && code <= 1080599) || (code >= 1080800 && code <= 1080899):
-		return "Sapphire Gemstone", radarCategoryGem, true
-	case (code >= 1090500 && code <= 1090599) || (code >= 1090800 && code <= 1090899):
-		return "Ruby Gemstone", radarCategoryGem, true
-	case (code >= 2000500 && code <= 2000599) || (code >= 2100500 && code <= 2100599) || (code >= 2200500 && code <= 2200599) || (code >= 2920500 && code <= 2920599):
-		return "Diamond Gemstone", radarCategoryGem, true
-	case (code >= 2300000 && code <= 2300999):
-		return "Floating Tourmaline", radarCategoryGem, true
-	case (code >= 2590000 && code <= 2590299):
-		return "Veil Jewel", radarCategoryGem, true
-
-	// Wood / Logs (Madera): Yggdrasil, Asvata
-	case (code >= 1080200 && code <= 1080399):
-		return "Yggdrasil Log", radarCategoryWood, true
-	case (code >= 1090200 && code <= 1090399):
-		return "Asvata Log", radarCategoryWood, true
-	case (code >= 2000200 && code <= 2000399) || (code >= 2100200 && code <= 2100399) || (code >= 2200200 && code <= 2200399) || (code >= 2300200 && code <= 2300399) || (code >= 2920200 && code <= 2920209):
-		return "Asvata Log", radarCategoryWood, true
-
-	// Herbs & Plants (Hierbas / Recolección): Aria, Azpha, Calendula, Targena, Vegetables & Berries
-	case (code >= 1080600 && code <= 1080999) || (code >= 1081500 && code <= 1081999):
-		return "Aria", radarCategoryHerb, true
-	case (code >= 1090600 && code <= 1090999) || (code >= 1091500 && code <= 1091999):
-		return "Azpha", radarCategoryHerb, true
-	case (code >= 1081000 && code <= 1081005):
-		return "Mela", radarCategoryHerb, true
-	case (code >= 1081006 && code <= 1081010):
-		return "Coriolus", radarCategoryHerb, true
-	case (code >= 1081011 && code <= 1081015):
-		return "Inina", radarCategoryHerb, true
-	case (code >= 1081016 && code <= 1081020):
-		return "Cypri", radarCategoryHerb, true
-	case (code >= 1081021 && code <= 1081025):
-		return "Kukuru", radarCategoryHerb, true
-	case (code >= 1091000 && code <= 1091005):
-		return "Raydam", radarCategoryHerb, true
-	case (code >= 1091006 && code <= 1091010):
-		return "Morfa", radarCategoryHerb, true
-	case (code >= 1091011 && code <= 1091015):
-		return "Conide", radarCategoryHerb, true
-	case (code >= 1091016 && code <= 1091020):
-		return "Pujery", radarCategoryHerb, true
-	case (code >= 1091021 && code <= 1091025):
-		return "Ohkra", radarCategoryHerb, true
-	case (code >= 2000600 && code <= 2000999) || (code >= 2001600 && code <= 2001999) || (code >= 2100600 && code <= 2100999) || (code >= 2200600 && code <= 2200999) || (code >= 2300600 && code <= 2300999) || (code >= 2920600 && code <= 2920999) || (code >= 2921600 && code <= 2921999):
-		return "Calendula", radarCategoryHerb, true
-	}
-	return "", "", false
-}
-
 func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, radarCategory, bool) {
-	// 1. Direct catalog lookup for confirmed Hidden Cubes (Original working logic - DO NOT ALTER)
-	if def, ok := radarCatalog[code]; ok && def.Category == radarCategoryChest {
+	// 1. Direct catalog lookup for confirmed Hidden Cubes
+	if def, ok := radarCatalog[code]; ok {
 		name := def.Name
 		if inlineName != "" {
 			name = inlineName
 		}
 		return name, def.Category, true
 	}
-	// 2. Exact keyword match in inlineName for Hidden Cubes / Chests (Original working logic - DO NOT ALTER)
+	// 2. Exact keyword match in inlineName for Hidden Cubes / Chests
 	lower := strings.ToLower(inlineName)
 	if lower != "" {
 		if strings.Contains(lower, "cube") || strings.Contains(lower, "cubo") ||
@@ -478,91 +169,13 @@ func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, r
 			return inlineName, radarCategoryChest, true
 		}
 	}
-	// 3. Direct catalog lookup for confirmed Gathering / Resource nodes
-	if def, ok := radarCatalog[code]; ok {
-		name := def.Name
-		if inlineName != "" {
-			name = inlineName
-		}
-		return name, def.Category, true
-	}
-	// 4. Exact keyword match in inlineName for gathering professions
-	if lower != "" {
-		switch {
-		case strings.Contains(lower, "orichalcum") || strings.Contains(lower, "ore") ||
-			strings.Contains(lower, "vein") || strings.Contains(lower, "mineral") ||
-			strings.Contains(lower, "oricalco") || strings.Contains(lower, "광석") ||
-			strings.Contains(lower, "iron") || strings.Contains(lower, "titanium") ||
-			strings.Contains(lower, "adamantium") || strings.Contains(lower, "mithril") ||
-			strings.Contains(lower, "platinum") || strings.Contains(lower, "hierro") ||
-			strings.Contains(lower, "titanio") || strings.Contains(lower, "adamantio"):
-			return inlineName, radarCategoryOre, true
-
-		case strings.Contains(lower, "herb") || strings.Contains(lower, "azpha") ||
-			strings.Contains(lower, "azfa") || strings.Contains(lower, "calendula") ||
-			strings.Contains(lower, "caléndula") || strings.Contains(lower, "aria") ||
-			strings.Contains(lower, "targena") || strings.Contains(lower, "pujery") ||
-			strings.Contains(lower, "conide") || strings.Contains(lower, "ohkra") ||
-			strings.Contains(lower, "morfa") || strings.Contains(lower, "raydam") ||
-			strings.Contains(lower, "mela") || strings.Contains(lower, "coriolus") ||
-			strings.Contains(lower, "coriolo") || strings.Contains(lower, "inina") ||
-			strings.Contains(lower, "cypri") || strings.Contains(lower, "chipriota") ||
-			strings.Contains(lower, "kukuru") || strings.Contains(lower, "hierba") ||
-			strings.Contains(lower, "plant") || strings.Contains(lower, "planta") ||
-			strings.Contains(lower, "약초"):
-			return inlineName, radarCategoryHerb, true
-
-		case strings.Contains(lower, "sapphire") || strings.Contains(lower, "ruby") ||
-			strings.Contains(lower, "rubí") || strings.Contains(lower, "diamond") ||
-			strings.Contains(lower, "gem") || strings.Contains(lower, "tourmaline") ||
-			strings.Contains(lower, "turmalina") || strings.Contains(lower, "jewel") ||
-			strings.Contains(lower, "joya") || strings.Contains(lower, "zafiro") ||
-			strings.Contains(lower, "diamante") || strings.Contains(lower, "gema") ||
-			strings.Contains(lower, "amethyst") || strings.Contains(lower, "amatista") ||
-			strings.Contains(lower, "topaz") || strings.Contains(lower, "topacio") ||
-			strings.Contains(lower, "esmeralda") || strings.Contains(lower, "emerald") ||
-			strings.Contains(lower, "보석"):
-			return inlineName, radarCategoryGem, true
-
-		case strings.Contains(lower, "log") || strings.Contains(lower, "asvata") ||
-			strings.Contains(lower, "yggdrasil") || strings.Contains(lower, "tree") ||
-			strings.Contains(lower, "árbol") || strings.Contains(lower, "arbol") ||
-			strings.Contains(lower, "wood") || strings.Contains(lower, "tronco") ||
-			strings.Contains(lower, "madera") || strings.Contains(lower, "registro") ||
-			strings.Contains(lower, "teak") || strings.Contains(lower, "sissoo") ||
-			strings.Contains(lower, "willow") || strings.Contains(lower, "oak") ||
-			strings.Contains(lower, "roble") || strings.Contains(lower, "목재"):
-			return inlineName, radarCategoryWood, true
-
-		case strings.Contains(lower, "odyle") || strings.Contains(lower, "odylium") ||
-			strings.Contains(lower, "odil") || strings.Contains(lower, "aether") ||
-			strings.Contains(lower, "éter") || strings.Contains(lower, "eter") ||
-			strings.Contains(lower, "crystal") || strings.Contains(lower, "cristal") ||
-			strings.Contains(lower, "오드"):
-			return inlineName, radarCategoryOdyle, true
-		}
-	}
-	// 5. Template ID prefix ranges from Aion 2 client database
-	if name, cat, ok := classifyByTemplateRange(code); ok {
-		if inlineName != "" {
-			return inlineName, cat, true
-		}
-		return name, cat, true
-	}
-	// Any non-catalog NPC, monster or decorative object is ignored to prevent clutter
+	// Only cubes/chests are tracked on radar. Ignore all resources and background objects.
 	return "", "", false
 }
 
 func (r *radarState) clear() {
 	if len(r.entities) > 0 {
 		r.entities = make(map[game.Entity]*radarEntity)
-		r.revision++
-	}
-}
-
-func (r *radarState) setMapID(id uint32) {
-	if r.mapID != id {
-		r.mapID = id
 		r.revision++
 	}
 }
@@ -807,14 +420,6 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 		}
 	}
 
-	// Map load opcode 0x3621 (wire "21 36")
-	if m.opcode == 0x3621 && len(m.payload) >= 8 {
-		mapID := binary.LittleEndian.Uint32(m.payload[4:8])
-		if mapID != 0 {
-			e.radar.setMapID(mapID)
-		}
-	}
-
 	// In-map teleport position fix (0x3623)
 	if m.opcode == 0x3623 && len(m.payload) >= 18 {
 		if pos, valid := readVec3LE(m.payload[6:18]); valid {
@@ -824,29 +429,12 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 
 	// Direct cube/actor spawn opcode 0x3641 (13889)
 	if m.opcode == 0x3641 {
-		if id, rest, ok := readVar(m.payload); ok && id != 0 {
-			// 1. Direct cube lookup at offset 5 (original working logic)
-			if len(rest) >= 5+18 {
-				offset := 5
-				npcID := binary.LittleEndian.Uint32(rest[offset : offset+4])
-				if def, found := radarCatalog[npcID]; found && def.Category == radarCategoryChest {
-					if pos, valid := readVec3LE(rest[offset+6 : offset+18]); valid {
-						e.radar.upsertEntity(m.t, game.Entity(id), npcID, 0, def.Name, pos)
-					}
-				}
-			}
-			// 2. HamMeter verified entity pattern: find marker 00 [00|40] 02
-			limit := len(rest) - 15
-			if limit > 60 {
-				limit = 60
-			}
-			for i := 3; i <= limit; i++ {
-				if rest[i] == 0x00 && (rest[i+1]&0xBF) == 0 && rest[i+2] == 0x02 {
-					mobCode := uint32(rest[i-3]) | (uint32(rest[i-2]) << 8) | (uint32(rest[i-1]) << 16)
-					if pos, valid := readVec3LE(rest[i+3 : i+3+12]); valid {
-						e.radar.upsertEntity(m.t, game.Entity(id), mobCode, 0, "", pos)
-					}
-					break
+		if id, rest, ok := readVar(m.payload); ok && id != 0 && len(rest) >= 5+18 {
+			offset := 5
+			npcID := binary.LittleEndian.Uint32(rest[offset : offset+4])
+			if def, found := radarCatalog[npcID]; found && def.Category == radarCategoryChest {
+				if pos, valid := readVec3LE(rest[offset+6 : offset+18]); valid {
+					e.radar.upsertEntity(m.t, game.Entity(id), npcID, 0, def.Name, pos)
 				}
 			}
 		}
@@ -1023,110 +611,56 @@ func computeDirection(selfPos game.Pos, hasSelfPos bool, hx, hy float32, hasHead
 }
 
 func (e *encounter) radarSnapshot() []radarDisplay {
-	var out []radarDisplay
-	if len(e.radar.entities) > 0 {
-		out = make([]radarDisplay, 0, len(e.radar.entities))
-		for _, ent := range e.radar.entities {
-			dist, rx, ry, dz, angle, hDir, vDir, hasDir := computeDirection(
-				e.radar.selfPos,
-				e.radar.hasSelfPos,
-				e.radar.headingX,
-				e.radar.headingY,
-				e.radar.hasHeading,
-				ent.pos,
-			)
-			if e.radar.hasSelfPos && dist > 500 {
-				continue
-			}
-			relAngle := 0.0
-			if e.radar.hasHeading && hasDir {
-				// Same compass frame as computeDirection: bearing = atan2(east=+X, north=-Y).
-				headingDeg := math.Atan2(float64(e.radar.headingX), -float64(e.radar.headingY)) * 180.0 / math.Pi
-				relAngle = math.Mod(angle-headingDeg+540.0, 360.0) - 180.0
-			}
-			// Hotter/colder trend with 0.5 m hysteresis so it does not flicker.
-			if ent.lastDist == 0 {
-				ent.lastDist = dist
-			} else if d := dist - ent.lastDist; math.Abs(d) >= 0.5 {
-				if d < 0 {
-					ent.trend = 1
-				} else {
-					ent.trend = -1
-				}
-				ent.lastDist = dist
-			}
-			out = append(out, radarDisplay{
-				ID:         ent.id,
-				NPC:        ent.npc,
-				Name:       ent.name,
-				Category:   ent.category,
-				Distance:   math.Round(dist*10) / 10,
-				RelX:       math.Round(rx*10) / 10,
-				RelY:       math.Round(ry*10) / 10,
-				ZDelta:     math.Round(dz*10) / 10,
-				Angle:      math.Round(angle),
-				HorizDir:   hDir,
-				VertDir:    vDir,
-				HasDir:     hasDir,
-				RelAngle:   math.Round(relAngle),
-				HasHeading: e.radar.hasHeading && hasDir,
-				Trend:      ent.trend,
-			})
-		}
-	}
-
-	// Query nearby gathering spots from spatial index if player position and map are known
-	if e.radar.hasSelfPos && e.radar.mapID != 0 {
-		spots := queryNearbyGatheringSpots(e.radar.mapID, e.radar.selfPos, 150.0)
-			for i, spot := range spots {
-				pos := game.Pos{X: spot.X, Y: spot.Y, Z: spot.Z}
-				// Skip if a dynamic entity is within 5m of this spot
-				tooClose := false
-				for _, ent := range e.radar.entities {
-					if math.Hypot(float64(ent.pos.X-pos.X), float64(ent.pos.Y-pos.Y)) < 500 {
-						tooClose = true
-						break
-					}
-				}
-				if tooClose {
-					continue
-				}
-				dist, rx, ry, dz, angle, hDir, vDir, hasDir := computeDirection(
-					e.radar.selfPos,
-					e.radar.hasSelfPos,
-					e.radar.headingX,
-					e.radar.headingY,
-					e.radar.hasHeading,
-					pos,
-				)
-				relAngle := 0.0
-				if e.radar.hasHeading && hasDir {
-					headingDeg := math.Atan2(float64(e.radar.headingX), -float64(e.radar.headingY)) * 180.0 / math.Pi
-					relAngle = math.Mod(angle-headingDeg+540.0, 360.0) - 180.0
-				}
-				spotID := uint32(0x80000000 | (uint32(spot.MapID&0x7F) << 24) | (uint32(i) & 0x00FFFFFF))
-				out = append(out, radarDisplay{
-					ID:         game.Entity(spotID),
-					NPC:        0,
-					Name:       spot.Name,
-					Category:   spot.Category,
-					Distance:   math.Round(dist*10) / 10,
-					RelX:       math.Round(rx*10) / 10,
-					RelY:       math.Round(ry*10) / 10,
-					ZDelta:     math.Round(dz*10) / 10,
-					Angle:      math.Round(angle),
-					HorizDir:   hDir,
-					VertDir:    vDir,
-					HasDir:     hasDir,
-					RelAngle:   math.Round(relAngle),
-					HasHeading: e.radar.hasHeading && hasDir,
-					Trend:      0,
-				})
-			}
-		}
-
-	if len(out) == 0 {
+	if len(e.radar.entities) == 0 {
 		return nil
+	}
+	out := make([]radarDisplay, 0, len(e.radar.entities))
+	for _, ent := range e.radar.entities {
+		dist, rx, ry, dz, angle, hDir, vDir, hasDir := computeDirection(
+			e.radar.selfPos,
+			e.radar.hasSelfPos,
+			e.radar.headingX,
+			e.radar.headingY,
+			e.radar.hasHeading,
+			ent.pos,
+		)
+		if e.radar.hasSelfPos && dist > 500 {
+			continue
+		}
+		relAngle := 0.0
+		if e.radar.hasHeading && hasDir {
+			// Same compass frame as computeDirection: bearing = atan2(east=+X, north=-Y).
+			headingDeg := math.Atan2(float64(e.radar.headingX), -float64(e.radar.headingY)) * 180.0 / math.Pi
+			relAngle = math.Mod(angle-headingDeg+540.0, 360.0) - 180.0
+		}
+		// Hotter/colder trend with 0.5 m hysteresis so it does not flicker.
+		if ent.lastDist == 0 {
+			ent.lastDist = dist
+		} else if d := dist - ent.lastDist; math.Abs(d) >= 0.5 {
+			if d < 0 {
+				ent.trend = 1
+			} else {
+				ent.trend = -1
+			}
+			ent.lastDist = dist
+		}
+		out = append(out, radarDisplay{
+			ID:       ent.id,
+			NPC:      ent.npc,
+			Name:     ent.name,
+			Category: ent.category,
+			Distance: math.Round(dist*10) / 10,
+			RelX:     math.Round(rx*10) / 10,
+			RelY:     math.Round(ry*10) / 10,
+			ZDelta:   math.Round(dz*10) / 10,
+			Angle:    math.Round(angle),
+			HorizDir: hDir,
+			VertDir:  vDir,
+			HasDir:   hasDir,
+			RelAngle:   math.Round(relAngle),
+			HasHeading: e.radar.hasHeading && hasDir,
+			Trend:      ent.trend,
+		})
 	}
 	sort.Slice(out, func(i, j int) bool {
 		if out[i].Distance == out[j].Distance {
@@ -1134,8 +668,8 @@ func (e *encounter) radarSnapshot() []radarDisplay {
 		}
 		return out[i].Distance < out[j].Distance
 	})
-	if len(out) > 64 {
-		out = out[:64]
+	if len(out) > 32 {
+		out = out[:32]
 	}
 	return out
 }
