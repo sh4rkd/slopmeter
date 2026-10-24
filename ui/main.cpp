@@ -235,13 +235,24 @@ public:
     QString radarSubmenu() const {return radarSubmenuSetting;}
     void setRadarSubmenu(const QString &val) {if(radarSubmenuSetting==val) return;radarSubmenuSetting=val;emit radarSubmenuChanged();}
     Q_INVOKABLE QStringList radarSubItemsFor(const QString &catKey) const {
-        if(catKey=="gem") return {"Sapphire Gemstone", "Diamond Gemstone", "Ruby Gemstone", "Floating Tourmaline", "Veil Jewel"};
-        if(catKey=="ore") return {"Orichalcum Ore", "Fine Orichalcum", "Pure Orichalcum", "Radiant Orichalcum"};
-        if(catKey=="herb") return {"Aria", "Targena", "Azpha", "Calendula", "Mela", "Coriolus", "Inina", "Cypri", "Kukuru", "Raydam", "Morfa", "Conide", "Pujery", "Ohkra"};
-        if(catKey=="wood") return {"Asvata Log", "Yggdrasil Log", "Fine Wood", "Pure Wood", "Radiant Wood"};
-        if(catKey=="odyle") return {"Odyle", "Fine Odyle", "Pure Odyle", "Radiant Odyle", "Odylium Ore", "Crystal"};
-        if(catKey=="chest") return {"Hidden Cube", "Supply Chest", "Treasure Chest"};
-        return {};
+        QStringList items;
+        if(catKey=="gem") items = {"Sapphire Gemstone", "Diamond Gemstone", "Ruby Gemstone", "Floating Tourmaline", "Veil Jewel"};
+        else if(catKey=="ore") items = {"Orichalcum Ore", "Iron Ore", "Titanium Ore", "Adamantium Ore", "Mithril"};
+        else if(catKey=="herb") items = {"Aria", "Targena", "Azpha", "Calendula", "Mela", "Coriolus", "Inina", "Cypri", "Kukuru", "Raydam", "Morfa", "Conide", "Pujery", "Ohkra"};
+        else if(catKey=="wood") items = {"Asvata Log", "Yggdrasil Log"};
+        else if(catKey=="odyle") items = {"Odyle", "Odylium Ore", "Crystal"};
+        else if(catKey=="chest") items = {"Hidden Cube", "Supply Chest", "Treasure Chest"};
+
+        for(const auto &v : radarRows) {
+            auto m = v.toMap();
+            if(m.value("category").toString() == catKey) {
+                QString n = m.value("name").toString();
+                if(!n.isEmpty() && !items.contains(n, Qt::CaseInsensitive)) {
+                    items.append(n);
+                }
+            }
+        }
+        return items;
     }
     Q_INVOKABLE void selectOnlyProfession(const QString &profKey) {
         setRadarChests(profKey == "chest");
@@ -1236,11 +1247,19 @@ public:
                 (cat=="object" && radarOtherSetting);
             if(!catMatch) continue;
             if(!radarItemFilterSetting.isEmpty()) {
-                if(radarItemFilterSetting == "Orichalcum Ore") {
-                    if(name != "Orichalcum Ore" && (name.contains("Fine", Qt::CaseInsensitive) || name.contains("Pure", Qt::CaseInsensitive) || name.contains("Radiant", Qt::CaseInsensitive))) continue;
-                } else if(!name.contains(radarItemFilterSetting, Qt::CaseInsensitive)) {
-                    continue;
+                const QString targetFilter = radarItemFilterSetting.trimmed();
+                bool matches = name.contains(targetFilter, Qt::CaseInsensitive);
+                if(!matches) {
+                    QString cleanFilter = targetFilter;
+                    cleanFilter.remove(" Ore", Qt::CaseInsensitive);
+                    cleanFilter.remove(" Gemstone", Qt::CaseInsensitive);
+                    cleanFilter.remove(" Log", Qt::CaseInsensitive);
+                    cleanFilter = cleanFilter.trimmed();
+                    if(!cleanFilter.isEmpty() && name.contains(cleanFilter, Qt::CaseInsensitive)) {
+                        matches = true;
+                    }
                 }
+                if(!matches) continue;
             }
             filtered.append(m);
         }

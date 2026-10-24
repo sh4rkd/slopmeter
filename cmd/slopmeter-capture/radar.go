@@ -302,6 +302,97 @@ func readVec3LE(b []byte) (game.Pos, bool) {
 	return p, validWorldPos(p)
 }
 
+func classifyByTemplateRange(code uint32) (string, radarCategory, bool) {
+	switch {
+	// Hidden Cubes (Poeta, Verteron, Eltnen, Morheim, Beluslan, Special) & Field Chests
+	case (code >= 1000290 && code <= 1000299) || (code >= 1000540 && code <= 1000570):
+		return "Hidden Cube", radarCategoryChest, true
+	case (code >= 1100050 && code <= 1100100):
+		return "Hidden Cube", radarCategoryChest, true
+	case (code >= 1200010 && code <= 1200045) || (code >= 1200660 && code <= 1200715) || (code >= 1201050 && code <= 1201060):
+		return "Hidden Cube", radarCategoryChest, true
+	case (code >= 1300080 && code <= 1300085) || (code >= 1300750 && code <= 1300760) || (code >= 1301195 && code <= 1301205):
+		return "Asmodian Hidden Cube", radarCategoryChest, true
+	case (code >= 1401330 && code <= 1401340):
+		return "Hidden Cube", radarCategoryChest, true
+	case code >= 3680000 && code <= 3689999:
+		return "Special Hidden Cube", radarCategoryChest, true
+	case (code >= 2900100 && code <= 2900250) || (code >= 2920100 && code <= 2920110):
+		return "Supply Chest", radarCategoryChest, true
+
+	// Odyle / Aether / Crystals
+	case (code >= 1080000 && code <= 1080099) || (code >= 1090000 && code <= 1090099):
+		return "Odyle", radarCategoryOdyle, true
+	case (code >= 1580000 && code <= 1590099) || (code >= 2000000 && code <= 2000099):
+		return "Odyle", radarCategoryOdyle, true
+	case (code >= 2000700 && code <= 2000899) || (code >= 2301300 && code <= 2321399) || (code >= 2921300 && code <= 2921399):
+		return "Crystal", radarCategoryOdyle, true
+	case (code >= 2920210 && code <= 2920230) || (code >= 2920300 && code <= 2920310) || (code >= 2920700 && code <= 2920710) || (code >= 2921400 && code <= 2921420):
+		return "Odylium Ore", radarCategoryOdyle, true
+
+	// Ores / Minerals (Minería): Iron, Titanium, Adamantium, Mithril, Orichalcum
+	case (code >= 1080100 && code <= 1080199) || (code >= 1080400 && code <= 1080499) || (code >= 1081100 && code <= 1081499):
+		return "Orichalcum Ore", radarCategoryOre, true
+	case (code >= 1090100 && code <= 1090199) || (code >= 1090400 && code <= 1090499) || (code >= 1091100 && code <= 1091499):
+		return "Orichalcum Ore", radarCategoryOre, true
+	case (code >= 2000100 && code <= 2000199) || (code >= 2000400 && code <= 2000499) || (code >= 2001100 && code <= 2001499):
+		return "Iron Ore", radarCategoryOre, true
+	case (code >= 2100100 && code <= 2100199) || (code >= 2100400 && code <= 2100499) || (code >= 2101100 && code <= 2101499):
+		return "Titanium Ore", radarCategoryOre, true
+	case (code >= 2200100 && code <= 2200199) || (code >= 2200400 && code <= 2200499) || (code >= 2300100 && code <= 2300199) || (code >= 2920320 && code <= 2920499) || (code >= 2921100 && code <= 2921399):
+		return "Adamantium Ore", radarCategoryOre, true
+
+	// Gems / Jewels (Gemas): Sapphire, Diamond, Ruby, Tourmaline, Veil Jewel
+	case (code >= 1080500 && code <= 1080599) || (code >= 1080800 && code <= 1080899):
+		return "Sapphire Gemstone", radarCategoryGem, true
+	case (code >= 1090500 && code <= 1090599) || (code >= 1090800 && code <= 1090899):
+		return "Ruby Gemstone", radarCategoryGem, true
+	case (code >= 2000500 && code <= 2000599) || (code >= 2100500 && code <= 2100599) || (code >= 2200500 && code <= 2200599) || (code >= 2920500 && code <= 2920599):
+		return "Diamond Gemstone", radarCategoryGem, true
+	case (code >= 2300000 && code <= 2300999):
+		return "Floating Tourmaline", radarCategoryGem, true
+	case (code >= 2590000 && code <= 2590299):
+		return "Veil Jewel", radarCategoryGem, true
+
+	// Wood / Logs (Madera): Yggdrasil, Asvata
+	case (code >= 1080200 && code <= 1080399):
+		return "Yggdrasil Log", radarCategoryWood, true
+	case (code >= 1090200 && code <= 1090399):
+		return "Asvata Log", radarCategoryWood, true
+	case (code >= 2000200 && code <= 2000399) || (code >= 2100200 && code <= 2100399) || (code >= 2200200 && code <= 2200399) || (code >= 2300200 && code <= 2300399) || (code >= 2920200 && code <= 2920209):
+		return "Asvata Log", radarCategoryWood, true
+
+	// Herbs & Plants (Hierbas / Recolección): Aria, Azpha, Calendula, Targena, Vegetables & Berries
+	case (code >= 1080600 && code <= 1080999) || (code >= 1081500 && code <= 1081999):
+		return "Aria", radarCategoryHerb, true
+	case (code >= 1090600 && code <= 1090999) || (code >= 1091500 && code <= 1091999):
+		return "Azpha", radarCategoryHerb, true
+	case (code >= 1081000 && code <= 1081005):
+		return "Mela", radarCategoryHerb, true
+	case (code >= 1081006 && code <= 1081010):
+		return "Coriolus", radarCategoryHerb, true
+	case (code >= 1081011 && code <= 1081015):
+		return "Inina", radarCategoryHerb, true
+	case (code >= 1081016 && code <= 1081020):
+		return "Cypri", radarCategoryHerb, true
+	case (code >= 1081021 && code <= 1081025):
+		return "Kukuru", radarCategoryHerb, true
+	case (code >= 1091000 && code <= 1091005):
+		return "Raydam", radarCategoryHerb, true
+	case (code >= 1091006 && code <= 1091010):
+		return "Morfa", radarCategoryHerb, true
+	case (code >= 1091011 && code <= 1091015):
+		return "Conide", radarCategoryHerb, true
+	case (code >= 1091016 && code <= 1091020):
+		return "Pujery", radarCategoryHerb, true
+	case (code >= 1091021 && code <= 1091025):
+		return "Ohkra", radarCategoryHerb, true
+	case (code >= 2000600 && code <= 2000999) || (code >= 2001600 && code <= 2001999) || (code >= 2100600 && code <= 2100999) || (code >= 2200600 && code <= 2200999) || (code >= 2300600 && code <= 2300999) || (code >= 2920600 && code <= 2920999) || (code >= 2921600 && code <= 2921999):
+		return "Calendula", radarCategoryHerb, true
+	}
+	return "", "", false
+}
+
 func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, radarCategory, bool) {
 	// 1. Direct catalog lookup for confirmed Cubes, Chests and GatherSource resources
 	if def, ok := radarCatalog[code]; ok {
@@ -327,7 +418,11 @@ func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, r
 
 		case strings.Contains(lower, "orichalcum") || strings.Contains(lower, "ore") ||
 			strings.Contains(lower, "vein") || strings.Contains(lower, "mineral") ||
-			strings.Contains(lower, "oricalco") || strings.Contains(lower, "광석"):
+			strings.Contains(lower, "oricalco") || strings.Contains(lower, "광석") ||
+			strings.Contains(lower, "iron") || strings.Contains(lower, "titanium") ||
+			strings.Contains(lower, "adamantium") || strings.Contains(lower, "mithril") ||
+			strings.Contains(lower, "platinum") || strings.Contains(lower, "hierro") ||
+			strings.Contains(lower, "titanio") || strings.Contains(lower, "adamantio"):
 			return inlineName, radarCategoryOre, true
 
 		case strings.Contains(lower, "herb") || strings.Contains(lower, "azpha") ||
@@ -346,19 +441,41 @@ func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, r
 			strings.Contains(lower, "tourmaline") || strings.Contains(lower, "jewel") ||
 			strings.Contains(lower, "zafiro") || strings.Contains(lower, "rubí") ||
 			strings.Contains(lower, "diamante") || strings.Contains(lower, "gema") ||
+			strings.Contains(lower, "amethyst") || strings.Contains(lower, "topaz") ||
+			strings.Contains(lower, "esmeralda") || strings.Contains(lower, "emerald") ||
 			strings.Contains(lower, "보석"):
 			return inlineName, radarCategoryGem, true
 
 		case strings.Contains(lower, "log") || strings.Contains(lower, "asvata") ||
 			strings.Contains(lower, "yggdrasil") || strings.Contains(lower, "tree") ||
 			strings.Contains(lower, "wood") || strings.Contains(lower, "tronco") ||
-			strings.Contains(lower, "madera") || strings.Contains(lower, "목재"):
+			strings.Contains(lower, "madera") || strings.Contains(lower, "teak") ||
+			strings.Contains(lower, "sissoo") || strings.Contains(lower, "willow") ||
+			strings.Contains(lower, "oak") || strings.Contains(lower, "목재"):
 			return inlineName, radarCategoryWood, true
 
 		case strings.Contains(lower, "odyle") || strings.Contains(lower, "odylium") ||
 			strings.Contains(lower, "odil") || strings.Contains(lower, "aether") ||
+			strings.Contains(lower, "crystal") || strings.Contains(lower, "cristal") ||
 			strings.Contains(lower, "오드"):
 			return inlineName, radarCategoryOdyle, true
+		}
+	}
+	// 3. Template ID prefix ranges from Aion 2 client database
+	if name, cat, ok := classifyByTemplateRange(code); ok {
+		if inlineName != "" {
+			return inlineName, cat, true
+		}
+		return name, cat, true
+	}
+	// 4. Object gadget kind detection for 0x3634 (World Object)
+	// Gadget kind 4/5/6/7 = Gathering node; kind 1/2/4 = Chest/Cube
+	if mask >= 1 && mask <= 10 {
+		if code >= 1000000 && code <= 1499999 {
+			return "Hidden Cube", radarCategoryChest, true
+		}
+		if code >= 3680000 && code <= 3689999 {
+			return "Special Hidden Cube", radarCategoryChest, true
 		}
 	}
 	// Any non-catalog NPC, monster or decorative object is ignored to prevent clutter
@@ -624,9 +741,9 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 		if id, rest, ok := readVar(m.payload); ok && id != 0 && len(rest) >= 5+18 {
 			offset := 5
 			npcID := binary.LittleEndian.Uint32(rest[offset : offset+4])
-			if def, found := radarCatalog[npcID]; found && def.Category == radarCategoryChest {
+			if name, _, ok := classifyRadarTarget(npcID, 0, ""); ok {
 				if pos, valid := readVec3LE(rest[offset+6 : offset+18]); valid {
-					e.radar.upsertEntity(m.t, game.Entity(id), npcID, 0, def.Name, pos)
+					e.radar.upsertEntity(m.t, game.Entity(id), npcID, 0, name, pos)
 				}
 			}
 		}
@@ -860,8 +977,8 @@ func (e *encounter) radarSnapshot() []radarDisplay {
 		}
 		return out[i].Distance < out[j].Distance
 	})
-	if len(out) > 32 {
-		out = out[:32]
+	if len(out) > 64 {
+		out = out[:64]
 	}
 	return out
 }

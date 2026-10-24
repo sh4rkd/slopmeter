@@ -237,6 +237,14 @@ func TestRadarClassificationAccuracy(t *testing.T) {
 		{1080501, radarCategoryGem, "Sapphire Gemstone"},
 		{1090201, radarCategoryWood, "Asvata Log"},
 		{1080001, radarCategoryOdyle, "Odyle"},
+		// Gathering node template ranges across zones & tiers
+		{1080150, radarCategoryOre, "Orichalcum Ore"},
+		{1080250, radarCategoryWood, "Yggdrasil Log"},
+		{1080550, radarCategoryGem, "Sapphire Gemstone"},
+		{1081500, radarCategoryHerb, "Aria"},
+		{1580050, radarCategoryOdyle, "Odyle"},
+		{2100150, radarCategoryOre, "Titanium Ore"},
+		{2300500, radarCategoryGem, "Floating Tourmaline"},
 	}
 
 	for _, tc := range validTargets {
@@ -252,18 +260,14 @@ func TestRadarClassificationAccuracy(t *testing.T) {
 		}
 	}
 
-	// Non-catalog monsters, combat NPCs and random background entities should be completely ignored (ok == false)
+	// Non-gathering monsters, dungeon mobs, combat NPCs and scenery should be completely ignored (ok == false)
 	ignoredCodes := []uint32{
-		1081500, // Non-catalog ID
-		1050000, // Random mob
-		1580050, // Non-catalog ID
-		1080550, // Non-catalog ID
-		1080150, // Non-catalog ID
-		1080250, // Non-catalog ID
-		1200550, // Misc NPC
-		1305100, // Misc NPC
-		2900150, // Misc Object
-		700100,  // Misc Object
+		1050000, // Random open world mob
+		1200550, // Friendly city NPC
+		1305100, // Friendly city NPC
+		700100,  // Scenery / static object
+		2101066, // Dungeon boss / mob
+		2290017, // Dungeon mob
 	}
 
 	for _, code := range ignoredCodes {

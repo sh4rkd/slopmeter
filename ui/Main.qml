@@ -234,7 +234,7 @@ Window {
                     RowLayout {
                         Layout.fillWidth: true; spacing: 3
                         Label {
-                            text: backend.radarSimpleMode ? "◎ AVISO RADAR" : "◎ MAPA"
+                            text: backend.radarSimpleMode ? "◎ AVISO RADAR" : "◎ RADAR"
                             color: "#54cf82"; font.pixelSize: 10; font.bold: true
                         }
                         Rectangle {
@@ -273,31 +273,74 @@ Window {
                             ToolTip.visible: rangeHover.hovered; ToolTip.text: "Cambiar zoom del radar (40m / 70m / 110m / 150m)"
                         }
                         Item { Layout.fillWidth: true }
+                        Label {
+                            visible: backend.displayRadar.length > 0
+                            text: backend.displayRadar.length + (backend.displayRadar.length === 1 ? " nodo" : " nodos")
+                            color: "#9ad9ec"; font.pixelSize: 9; font.bold: true
+                        }
+                        Rectangle {
+                            visible: (!backend.radarChests || !backend.radarOres || !backend.radarHerbs || !backend.radarGems || !backend.radarWood || !backend.radarOdyle || backend.radarItemFilter !== "")
+                            implicitWidth: resetFiltersLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
+                            color: "#283444"; border.width: 1; border.color: "#4e6482"
+                            Label {
+                                id: resetFiltersLbl; anchors.centerIn: parent
+                                text: "Ver todos"
+                                color: "#ffffff"; font.pixelSize: 8; font.bold: true
+                            }
+                            TapHandler {
+                                onTapped: {
+                                    backend.radarChests = true
+                                    backend.radarOres = true
+                                    backend.radarHerbs = true
+                                    backend.radarGems = true
+                                    backend.radarWood = true
+                                    backend.radarOdyle = true
+                                    backend.radarItemFilter = ""
+                                    backend.radarSubmenu = ""
+                                }
+                            }
+                            HoverHandler { id: resetFilterHover; cursorShape: Qt.PointingHandCursor }
+                            ToolTip.visible: resetFilterHover.hovered; ToolTip.text: "Restablecer filtros y mostrar todos los oficios y recursos"
+                        }
+                    }
+                    Flow {
+                        id: professionFlow
+                        objectName: "radarProfessionFilterBar"
+                        Layout.fillWidth: true
+                        spacing: 3
                         Repeater {
                             model: [
-                                { key: "chest", label: "Cubos", active: backend.radarChests, color: "#f2c15a", visible: true },
-                                { key: "ore", label: "Minería", active: backend.radarOres, color: "#ff9f5a", visible: true },
-                                { key: "herb", label: "Hierbas", active: backend.radarHerbs, color: "#7be35a", visible: true },
-                                { key: "gem", label: "Gemas", active: backend.radarGems, color: "#e082ff", visible: true },
-                                { key: "wood", label: "Madera", active: backend.radarWood, color: "#c89b6e", visible: true },
-                                { key: "odyle", label: "Odyle", active: backend.radarOdyle, color: "#6be0ff", visible: true },
-                                { key: "other", label: "Otros", active: backend.radarOther, color: "#c0cbdc", visible: backend.radarOther }
+                                { key: "chest", label: "Cubos", icon: "◈", active: backend.radarChests, color: "#f2c15a", visible: true },
+                                { key: "ore", label: "Minería", icon: "⬡", active: backend.radarOres, color: "#ff9f5a", visible: true },
+                                { key: "herb", label: "Hierbas", icon: "❖", active: backend.radarHerbs, color: "#7be35a", visible: true },
+                                { key: "gem", label: "Gemas", icon: "◆", active: backend.radarGems, color: "#e082ff", visible: true },
+                                { key: "wood", label: "Madera", icon: "▤", active: backend.radarWood, color: "#c89b6e", visible: true },
+                                { key: "odyle", label: "Odyle", icon: "✦", active: backend.radarOdyle, color: "#6be0ff", visible: true },
+                                { key: "other", label: "Otros", icon: "○", active: backend.radarOther, color: "#c0cbdc", visible: backend.radarOther }
                             ]
                             delegate: Rectangle {
                                 required property var modelData
                                 objectName: "radarFilter_" + modelData.key
                                 visible: modelData.visible
-                                implicitWidth: modelData.visible ? (pillLabel.implicitWidth + 8) : 0
-                                implicitHeight: modelData.visible ? 17 : 0; radius: 3
-                                color: modelData.active ? Qt.rgba(40/255, 58/255, 78/255, 0.92) : "transparent"
+                                implicitWidth: modelData.visible ? (pillRow.implicitWidth + 8) : 0
+                                implicitHeight: modelData.visible ? 18 : 0; radius: 3
+                                color: modelData.active ? Qt.rgba(40/255, 58/255, 78/255, 0.92) : "#131b26"
                                 border.width: 1
-                                border.color: modelData.active ? modelData.color : "#3b495e"
-                                Label {
-                                    id: pillLabel
+                                border.color: modelData.active ? modelData.color : "#344254"
+                                RowLayout {
+                                    id: pillRow
                                     anchors.centerIn: parent
-                                    text: modelData.label
-                                    font.pixelSize: 9; font.bold: modelData.active
-                                    color: modelData.active ? modelData.color : "#7e8ea6"
+                                    spacing: 3
+                                    Label {
+                                        text: modelData.icon
+                                        font.pixelSize: 8
+                                        color: modelData.active ? modelData.color : "#5b6d85"
+                                    }
+                                    Label {
+                                        text: modelData.label
+                                        font.pixelSize: 9; font.bold: modelData.active
+                                        color: modelData.active ? modelData.color : "#7e8ea6"
+                                    }
                                 }
                                 TapHandler {
                                     acceptedButtons: Qt.LeftButton | Qt.RightButton
@@ -310,7 +353,7 @@ Window {
                                 }
                                 HoverHandler { id: pillHover; cursorShape: Qt.PointingHandCursor }
                                 ToolTip.visible: pillHover.hovered
-                                ToolTip.text: "Clic: activar/desactivar\nClic derecho o doble clic: Solo " + modelData.label
+                                ToolTip.text: "Clic: activar/desactivar\nClic derecho o doble clic: Rastrear SOLO " + modelData.label
                             }
                         }
                     }
@@ -322,15 +365,15 @@ Window {
                         visible: backend.radarSubmenu !== "" || backend.radarItemFilter !== ""
                         Rectangle {
                             implicitWidth: allSubLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
-                            color: backend.radarItemFilter === "" ? "#2b4257" : "transparent"
-                            border.width: 1; border.color: backend.radarItemFilter === "" ? "#9ad9ec" : "#3b495e"
+                            color: backend.radarItemFilter === "" ? "#2b4257" : "#141c26"
+                            border.width: 1; border.color: backend.radarItemFilter === "" ? "#9ad9ec" : "#354559"
                             Label {
                                 id: allSubLbl; anchors.centerIn: parent
-                                text: "Todos"
+                                text: "Todos (" + (backend.radarSubmenu !== "" ? backend.radarSubmenu.toUpperCase() : "OFICIO") + ")"
                                 font.pixelSize: 9; font.bold: backend.radarItemFilter === ""
                                 color: backend.radarItemFilter === "" ? "#ffffff" : "#8e9eb5"
                             }
-                            TapHandler { onTapped: { backend.radarItemFilter = ""; backend.radarSubmenu = "" } }
+                            TapHandler { onTapped: { backend.radarItemFilter = "" } }
                             HoverHandler { cursorShape: Qt.PointingHandCursor }
                         }
                         Repeater {
@@ -338,7 +381,7 @@ Window {
                             delegate: Rectangle {
                                 required property string modelData
                                 implicitWidth: subItemLbl.implicitWidth + 8; implicitHeight: 16; radius: 3
-                                property bool selected: backend.radarItemFilter === modelData
+                                property bool selected: backend.radarItemFilter === modelData || (backend.radarItemFilter !== "" && modelData.indexOf(backend.radarItemFilter) !== -1)
                                 color: selected ? "#2b4257" : "#182230"
                                 border.width: 1; border.color: selected ? "#54cf82" : "#35465c"
                                 Label {
@@ -353,6 +396,14 @@ Window {
                                 HoverHandler { cursorShape: Qt.PointingHandCursor }
                             }
                         }
+                        Rectangle {
+                            implicitWidth: 16; implicitHeight: 16; radius: 3
+                            color: "#222c3a"; border.width: 1; border.color: "#3a4a5e"
+                            Label { anchors.centerIn: parent; text: "×"; color: "#8e9eb5"; font.pixelSize: 10; font.bold: true }
+                            TapHandler { onTapped: { backend.radarItemFilter = ""; backend.radarSubmenu = "" } }
+                            HoverHandler { id: closeSubHover; cursorShape: Qt.PointingHandCursor }
+                            ToolTip.visible: closeSubHover.hovered; ToolTip.text: "Cerrar desglose de recursos"
+                        }
                     }
                     // Flecha de navegación: apunta hacia donde caminar con el personaje.
                     // 0° = sigue recto (relativo a tu dirección de marcha), se calibra al caminar ~2 m.
@@ -366,8 +417,8 @@ Window {
                         property real dist: hasT ? Number(target.distance || 0) : 0
                         visible: hasT
                         Layout.fillWidth: true
-                        implicitHeight: 96
-                        radius: 6
+                        implicitHeight: 74
+                        radius: 5
                         color: backend.minimalistMode ? Qt.rgba(16/255, 30/255, 24/255, 0.88) : "#122219"
                         border.width: 1.5
                         border.color: dist <= 5 ? "#f2c15a" : (hasT && target.trend > 0 ? "#54cf82" : (hasT && target.trend < 0 ? "#ff6b6b" : "#3d6b55"))
@@ -382,9 +433,9 @@ Window {
                             return a > -60 ? "LIGERO A LA IZQUIERDA" : "GIRA A LA IZQUIERDA"
                         }
                         RowLayout {
-                            anchors.fill: parent; anchors.margins: 8; spacing: 10
+                            anchors.fill: parent; anchors.margins: 6; spacing: 8
                             Item {
-                                Layout.preferredWidth: 78; Layout.preferredHeight: 78
+                                Layout.preferredWidth: 60; Layout.preferredHeight: 60
                                 Rectangle {
                                     anchors.fill: parent; radius: width / 2
                                     color: "transparent"; border.width: 1; border.color: "#2a4a3a"
@@ -393,26 +444,25 @@ Window {
                                     id: navArrow
                                     objectName: "radarNavArrow"
                                     anchors.centerIn: parent
-                                    width: 64; height: 64
-                                    sourceSize.width: 128; sourceSize.height: 128
+                                    width: 48; height: 48
+                                    sourceSize.width: 96; sourceSize.height: 96
                                     source: "icons/arrow.svg"
                                     smooth: true
                                     rotation: radarNavPanel.navAngle
-                                    // RotationAnimation toma el camino más corto (no da la vuelta de 179° a -179°)
                                     Behavior on rotation { RotationAnimation { duration: 350; direction: RotationAnimation.Shortest } }
                                 }
                             }
                             ColumnLayout {
-                                Layout.fillWidth: true; spacing: 2
+                                Layout.fillWidth: true; spacing: 1
                                 Label {
                                     objectName: "radarNavTurn"
                                     text: radarNavPanel.turnText()
-                                    color: "#ffffff"; font.pixelSize: 13; font.bold: true
+                                    color: "#ffffff"; font.pixelSize: 12; font.bold: true
                                     Layout.fillWidth: true; elide: Text.ElideRight
                                 }
                                 Label {
                                     text: radarNavPanel.hasT ? (Number(radarNavPanel.dist).toFixed(0) + " m") : ""
-                                    color: "#f2c15a"; font.pixelSize: 20; font.bold: true
+                                    color: "#f2c15a"; font.pixelSize: 17; font.bold: true
                                 }
                                 Label {
                                     text: {
@@ -427,12 +477,12 @@ Window {
                                         if (!radarNavPanel.hasT) return "#c0cbdc"
                                         return t.trend > 0 ? "#54cf82" : (t.trend < 0 ? "#ff8e8e" : "#c0cbdc")
                                     }
-                                    font.pixelSize: 10; font.bold: true
+                                    font.pixelSize: 9; font.bold: true
                                     Layout.fillWidth: true; elide: Text.ElideRight
                                 }
                                 Label {
                                     visible: radarNavPanel.hasT && !radarNavPanel.relative
-                                    text: "Mientras tanto la flecha indica el Norte del mapa (" + (radarNavPanel.hasT ? radarNavPanel.target.horizDir : "") + ")"
+                                    text: "Mientras tanto la flecha indica el Norte (" + (radarNavPanel.hasT ? radarNavPanel.target.horizDir : "") + ")"
                                     color: "#7e8ea6"; font.pixelSize: 8
                                     Layout.fillWidth: true; elide: Text.ElideRight
                                 }
