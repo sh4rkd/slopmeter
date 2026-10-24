@@ -41,8 +41,6 @@ type radarEntity struct {
 	category   radarCategory
 	pos        game.Pos
 	updated    time.Time
-	lastDist   float64 // distance at the last trend sample (m), 0 = not sampled yet
-	trend      int     // +1 getting closer, -1 getting farther, 0 unknown
 }
 
 type radarState struct {
@@ -52,22 +50,8 @@ type radarState struct {
 	headingX   float32
 	headingY   float32
 	hasHeading bool
-	// anchorPos is the last position used to sample the walking direction.
-	// The heading is only re-sampled after moving headingSampleCm away from it,
-	// so small jitter, strafing steps or standing still never make the arrow spin.
-	anchorPos game.Pos
-	hasAnchor bool
-	revision  uint64
+	revision   uint64
 }
-
-const (
-	// headingSampleCm is the minimum travelled distance before the walking direction is re-sampled (1.5 m).
-	headingSampleCm = 150.0
-	// headingSmoothing is the weight of a new heading sample (exponential smoothing of the direction vector).
-	headingSmoothing = 0.45
-	// headingTeleportCm resets the heading anchor on teleports/zone jumps instead of producing a bogus direction.
-	headingTeleportCm = 3000.0
-)
 
 type radarDisplay struct {
 	ID       game.Entity   `json:"id"`
@@ -82,12 +66,6 @@ type radarDisplay struct {
 	HorizDir string        `json:"horizDir"`
 	VertDir  string        `json:"vertDir"`
 	HasDir   bool          `json:"hasDir"`
-	// RelAngle is the bearing to the target relative to the character's walking
-	// direction: 0 = straight ahead, +90 = right, -90 = left, 180 = behind.
-	RelAngle   float64 `json:"relAngle"`
-	HasHeading bool    `json:"hasHeading"`
-	// Trend: +1 getting closer, -1 getting farther, 0 steady/unknown.
-	Trend int `json:"trend"`
 }
 
 var radarCatalog = map[uint32]radarDefinition{
@@ -184,7 +162,17 @@ func (r *radarState) updateSelfPos(pos game.Pos) {
 	if !validWorldPos(pos) {
 		return
 	}
-	r.sampleHeading(pos)
+	if r.hasSelfPos {
+		dx := pos.X - r.selfPos.X
+		dy := pos.Y - r.selfPos.Y
+		dist := float32(math.Hypot(float64(dx), float64(dy)))
+		// Update movement heading when player moves at least 30 units (0.3m)
+		if dist >= 30 {
+			r.headingX = dx / dist
+			r.headingY = dy / dist
+			r.hasHeading = true
+		}
+	}
 	if !r.hasSelfPos || math.Abs(float64(pos.X-r.selfPos.X)) > 5 || math.Abs(float64(pos.Y-r.selfPos.Y)) > 5 || math.Abs(float64(pos.Z-r.selfPos.Z)) > 5 {
 		r.selfPos = pos
 		r.hasSelfPos = true
@@ -192,36 +180,19 @@ func (r *radarState) updateSelfPos(pos game.Pos) {
 	}
 }
 
-// sampleHeading derives the character's walking direction from its own track.
-// Aion 2 does not send the camera yaw, so like the community cube radars we use the
-// movement vector; unlike a per-packet delta it is sampled over >= 1.5 m and smoothed,
-// which keeps the navigation arrow steady while walking.
-func (r *radarState) sampleHeading(pos game.Pos) {
-	if !r.hasAnchor {
-		r.anchorPos, r.hasAnchor = pos, true
+func (r *radarState) updateHeadingToward(targetPos game.Pos) {
+	if !r.hasSelfPos || !validWorldPos(targetPos) {
 		return
 	}
-	dx := float64(pos.X - r.anchorPos.X)
-	dy := float64(pos.Y - r.anchorPos.Y)
-	dist := math.Hypot(dx, dy)
-	if dist > headingTeleportCm {
-		r.anchorPos = pos
-		return
+	dx := targetPos.X - r.selfPos.X
+	dy := targetPos.Y - r.selfPos.Y
+	dist := float32(math.Hypot(float64(dx), float64(dy)))
+	if dist >= 20 {
+		r.headingX = dx / dist
+		r.headingY = dy / dist
+		r.hasHeading = true
+		r.revision++
 	}
-	if dist < headingSampleCm {
-		return
-	}
-	nx, ny := dx/dist, dy/dist
-	if r.hasHeading {
-		hx := (1-headingSmoothing)*float64(r.headingX) + headingSmoothing*nx
-		hy := (1-headingSmoothing)*float64(r.headingY) + headingSmoothing*ny
-		if l := math.Hypot(hx, hy); l > 1e-6 {
-			nx, ny = hx/l, hy/l
-		}
-	}
-	r.headingX, r.headingY, r.hasHeading = float32(nx), float32(ny), true
-	r.anchorPos = pos
-	r.revision++
 }
 
 func (r *radarState) upsertEntity(t time.Time, id game.Entity, code uint32, mask uint32, inlineName string, pos game.Pos) {
@@ -342,18 +313,27 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 	switch ev := m.event.(type) {
 	case game.Zone:
 		e.radar.clear()
-		e.radar.hasAnchor, e.radar.hasHeading = false, false
 		e.radar.updateSelfPos(ev.Pos)
 	case game.Move:
 		if self != 0 && ev.Entity == self {
 			e.radar.updateSelfPos(ev.Pos)
 		} else if self == 0 && !e.radar.hasSelfPos && (e.radar.entities == nil || e.radar.entities[ev.Entity] == nil) && validWorldPos(ev.Pos) {
 			e.radar.updateSelfPos(ev.Pos)
+		} else if e.radar.entities != nil {
+			if ent, ok := e.radar.entities[ev.Entity]; ok && validWorldPos(ev.Pos) {
+				ent.pos = ev.Pos
+				ent.updated = m.t
+				e.radar.revision++
+			}
 		}
 	case game.Cast:
 		if (self != 0 && ev.Actor == self) || (self == 0 && !e.radar.hasSelfPos && validWorldPos(ev.Pos)) {
-			// In game.Cast, Pos is the skill target's position: it must not move the
-			// player nor turn the walking heading (that made the arrow jump in combat).
+			e.radar.updateSelfPos(ev.Pos)
+			if ev.Target != 0 && e.radar.entities != nil {
+				if targetEnt := e.radar.entities[ev.Target]; targetEnt != nil {
+					e.radar.updateHeadingToward(targetEnt.pos)
+				}
+			}
 		}
 	case game.Death:
 		e.radar.removeEntity(ev.Entity)
@@ -392,31 +372,10 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 		e.radar.removeNearbyEntities(600.0)
 	}
 
-	// Own position from self-buff records (0x382A / 0x382B). Layout verified by
-	// Cube Watch / ayi-afk / dr89mh: body starts with the caster varint and ends with
-	// `caster varint | 01 00 (2A) or 01 02 (2B) | x y z f32`. The same opcodes are
-	// also sent for other players, so the leading and trailing ids must match and
-	// be our own entity; otherwise the radar jumped to other players' positions.
-	if m.opcode == 0x382A || m.opcode == 0x382B {
-		if pos, id, ok := parseSelfBuffPos(m.payload, m.opcode == 0x382B); ok && (self == 0 || game.Entity(id) == self) {
+	// Continuous player position update from server buff/stat records (0x382A / 0x382B)
+	if (m.opcode == 0x382A || m.opcode == 0x382B) && len(m.payload) >= 16 {
+		if pos, valid := readVec3LE(m.payload[len(m.payload)-12:]); valid {
 			e.radar.updateSelfPos(pos)
-		}
-	}
-
-	// Map load (0x3621): `u32 count | u32 map | u32 | u32 | x y z | heading` carries our position.
-	if m.opcode == 0x3621 && len(m.payload) >= 28 {
-		if pos, valid := readVec3LE(m.payload[16:28]); valid {
-			e.radar.hasAnchor, e.radar.hasHeading = false, false
-			e.radar.updateSelfPos(pos)
-		}
-	}
-
-	// Generic entity position (0x371A, server side): `id varint | 2 bytes | x y z`.
-	if m.opcode == 0x371A && self != 0 {
-		if id, rest, ok := readVar(m.payload); ok && game.Entity(id) == self && len(rest) >= 14 {
-			if pos, valid := readVec3LE(rest[2:14]); valid {
-				e.radar.updateSelfPos(pos)
-			}
 		}
 	}
 
@@ -443,28 +402,6 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 	if m.opcode == 0x3640 || m.opcode == 0x3641 || m.opcode == 0x3646 || m.opcode == 0x3647 || m.opcode == 0x3649 || m.opcode == 0x364A {
 		e.observeRadarSpawn(m.t, m.opcode, m.payload)
 	}
-}
-
-// parseSelfBuffPos decodes the trailing caster position of a 0x382A/0x382B record.
-func parseSelfBuffPos(p []byte, is2B bool) (game.Pos, uint32, bool) {
-	id, rest, ok := readVar(p)
-	if !ok || id == 0 || len(p) < 16 {
-		return game.Pos{}, 0, false
-	}
-	width := len(p) - len(rest)
-	start := len(p) - 14 - width
-	if start < width {
-		return game.Pos{}, 0, false
-	}
-	tailID, tailRest, ok := readVar(p[start : len(p)-12])
-	if !ok || tailID != id || len(tailRest) != 2 || tailRest[0] != 0x01 {
-		return game.Pos{}, 0, false
-	}
-	if (is2B && tailRest[1] != 0x02) || (!is2B && tailRest[1] != 0x00) {
-		return game.Pos{}, 0, false
-	}
-	pos, valid := readVec3LE(p[len(p)-12:])
-	return pos, id, valid
 }
 
 func (e *encounter) observeRadarObjectSpawn(t time.Time, payload []byte) {
@@ -557,11 +494,12 @@ func computeDirection(selfPos game.Pos, hasSelfPos bool, hx, hy float32, hasHead
 	if !hasSelfPos {
 		return 0, 0, 0, 0, 0, "Norte", "Nivel", false
 	}
-	// Aion 2 world axes as measured on the in-game minimap by three independent
-	// cube radars (Cube Watch, dr89mh/aion2-cube-radar Geo.cs, ayi-afk/aion2cubedetector
-	// compass.v): map North = world -Y, map East = world +X, +Z = up.
-	dx := float64(targetPos.X - selfPos.X) // East(+)/West(-) offset in Unreal units
-	dy := float64(targetPos.Y - selfPos.Y) // South(+)/North(-) offset in Unreal units
+	// In Unreal Engine / Aion 2 world coordinates:
+	// +X is World North
+	// +Y is World East
+	// +Z is World Up
+	dx := float64(targetPos.X - selfPos.X) // North/South offset in Unreal units
+	dy := float64(targetPos.Y - selfPos.Y) // East/West offset in Unreal units
 	dz := float64(targetPos.Z - selfPos.Z) // Height offset in Unreal units
 
 	// 100 Unreal units = 1 meter
@@ -581,11 +519,17 @@ func computeDirection(selfPos game.Pos, hasSelfPos bool, hx, hy float32, hasHead
 		return distMeters, 0, 0, zDeltaMeters, 0, "Aquí", vertDir, true
 	}
 
-	// World Compass / Radar Projection (aligned with the in-game minimap):
-	// - North (-Y) is Top of map (+relY)
-	// - East (+X) is Right of map (+relX)
-	relY = -dy / 100.0
-	relX = dx / 100.0
+	// World Compass / Radar Projection:
+	// In Aion 2 radar / mini-map:
+	// - North (+X) is Top / Front of map (+relY)
+	// - East (+Y) is Right of map (+relX)
+	// - South (-X) is Bottom / Back of map (-relY)
+	// - West (-Y) is Left of map (-relX)
+	//
+	// Fixed world coordinate compass reference provides 100% deterministic,
+	// drift-free directions aligned with the in-game mini-map.
+	relY = dx / 100.0
+	relX = dy / 100.0
 	angleDeg = math.Atan2(relX, relY) * 180.0 / math.Pi
 
 	// Cardinal and 8-way directional mapping
@@ -627,23 +571,6 @@ func (e *encounter) radarSnapshot() []radarDisplay {
 		if e.radar.hasSelfPos && dist > 500 {
 			continue
 		}
-		relAngle := 0.0
-		if e.radar.hasHeading && hasDir {
-			// Same compass frame as computeDirection: bearing = atan2(east=+X, north=-Y).
-			headingDeg := math.Atan2(float64(e.radar.headingX), -float64(e.radar.headingY)) * 180.0 / math.Pi
-			relAngle = math.Mod(angle-headingDeg+540.0, 360.0) - 180.0
-		}
-		// Hotter/colder trend with 0.5 m hysteresis so it does not flicker.
-		if ent.lastDist == 0 {
-			ent.lastDist = dist
-		} else if d := dist - ent.lastDist; math.Abs(d) >= 0.5 {
-			if d < 0 {
-				ent.trend = 1
-			} else {
-				ent.trend = -1
-			}
-			ent.lastDist = dist
-		}
 		out = append(out, radarDisplay{
 			ID:       ent.id,
 			NPC:      ent.npc,
@@ -657,9 +584,6 @@ func (e *encounter) radarSnapshot() []radarDisplay {
 			HorizDir: hDir,
 			VertDir:  vDir,
 			HasDir:   hasDir,
-			RelAngle:   math.Round(relAngle),
-			HasHeading: e.radar.hasHeading && hasDir,
-			Trend:      ent.trend,
 		})
 	}
 	sort.Slice(out, func(i, j int) bool {
