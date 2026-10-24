@@ -119,6 +119,67 @@ var radarCatalog = map[uint32]radarDefinition{
 	1401336: {1401336, "Hidden Cube", radarCategoryChest},
 	3682560: {3682560, "Special Hidden Cube", radarCategoryChest},
 
+	// World Gathering Nodes (Sammelpunkte - verified in captures / client)
+	1500000: {1500000, "Orichalcum Ore / Mineral de oricalco", radarCategoryOre},
+	1500012: {1500012, "Orichalcum Ore / Mineral de oricalco", radarCategoryOre},
+	1200611: {1200611, "Orichalcum Ore / Mineral de oricalco", radarCategoryOre},
+	1500041: {1500041, "Coriolus / Coriolo", radarCategoryHerb},
+	1100001: {1100001, "Azpha / Azfa", radarCategoryHerb},
+	1200860: {1200860, "Odyle / Odile", radarCategoryOdyle},
+
+	// Crafting & Resource items from recipes.json
+	610620013: {610620013, "Mineral de oricalco", radarCategoryOre},
+	610620014: {610620014, "Mineral fino de oricalco", radarCategoryOre},
+	610620015: {610620015, "Mineral de oricalco puro", radarCategoryOre},
+	610620016: {610620016, "Mineral de oricalco radiante", radarCategoryOre},
+
+	610610013: {610610013, "Odyle", radarCategoryOdyle},
+	610610014: {610610014, "Odyle fino", radarCategoryOdyle},
+	610610015: {610610015, "Odyle puro", radarCategoryOdyle},
+	610610016: {610610016, "Odyle radiante", radarCategoryOdyle},
+
+	610650011: {610650011, "Tronco de Yggdrasil", radarCategoryWood},
+	610650012: {610650012, "Registro de Asvata", radarCategoryWood},
+	610650013: {610650013, "Tronco fino de Yggdrasil", radarCategoryWood},
+	610650014: {610650014, "Registro fino de Asvata", radarCategoryWood},
+	610650015: {610650015, "Tronco de Yggdrasil puro", radarCategoryWood},
+	610650016: {610650016, "Registro puro de Asvata", radarCategoryWood},
+	610650017: {610650017, "Tronco de Yggdrasil radiante", radarCategoryWood},
+	610650018: {610650018, "Registro radiante de Asvata", radarCategoryWood},
+
+	610660025: {610660025, "Piedra preciosa de zafiro", radarCategoryGem},
+	610660026: {610660026, "Piedra preciosa de diamante", radarCategoryGem},
+	610660027: {610660027, "Piedra preciosa de rubí", radarCategoryGem},
+	610660028: {610660028, "Piedra preciosa de zafiro fino", radarCategoryGem},
+	610660029: {610660029, "Piedra preciosa de diamante fino", radarCategoryGem},
+	610660030: {610660030, "Piedra preciosa de rubí fina", radarCategoryGem},
+	610660031: {610660031, "Piedra preciosa de zafiro puro", radarCategoryGem},
+	610660032: {610660032, "Piedra preciosa de diamante puro", radarCategoryGem},
+	610660033: {610660033, "Piedra preciosa de rubí puro", radarCategoryGem},
+	610660034: {610660034, "Piedra preciosa de zafiro radiante", radarCategoryGem},
+	610660035: {610660035, "Piedra preciosa de diamante radiante", radarCategoryGem},
+	610660036: {610660036, "Piedra preciosa de rubí radiante", radarCategoryGem},
+
+	610670041: {610670041, "Aria", radarCategoryHerb},
+	610670042: {610670042, "Targena", radarCategoryHerb},
+	610670043: {610670043, "Azfa", radarCategoryHerb},
+	610670044: {610670044, "Caléndula", radarCategoryHerb},
+	610670045: {610670045, "Aria fresca", radarCategoryHerb},
+	610670046: {610670046, "Targena fresca", radarCategoryHerb},
+	610670047: {610670047, "Azfa fresca", radarCategoryHerb},
+	610670048: {610670048, "Caléndula fresca", radarCategoryHerb},
+
+	610680043: {610680043, "Coriolo", radarCategoryHerb},
+	610680044: {610680044, "Kukuru", radarCategoryHerb},
+	610680045: {610680045, "Mela", radarCategoryHerb},
+	610680047: {610680047, "Inina", radarCategoryHerb},
+	610680048: {610680048, "Chipriota", radarCategoryHerb},
+	610680049: {610680049, "Morfa", radarCategoryHerb},
+	610680050: {610680050, "Ohkra", radarCategoryHerb},
+	610680051: {610680051, "Raydam", radarCategoryHerb},
+	610680053: {610680053, "Conide", radarCategoryHerb},
+	610680054: {610680054, "Pujery", radarCategoryHerb},
+
 	// Interactive Supply / Field Chests
 	2900100: {2900100, "Supply Chest", radarCategoryChest},
 	2900101: {2900101, "Supply Chest", radarCategoryChest},
@@ -394,7 +455,29 @@ func classifyByTemplateRange(code uint32) (string, radarCategory, bool) {
 }
 
 func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, radarCategory, bool) {
-	// 1. Direct catalog lookup for confirmed Cubes, Chests and GatherSource resources
+	// 1. Direct catalog lookup for confirmed Hidden Cubes (Original working logic - DO NOT ALTER)
+	if def, ok := radarCatalog[code]; ok && def.Category == radarCategoryChest {
+		name := def.Name
+		if inlineName != "" {
+			name = inlineName
+		}
+		return name, def.Category, true
+	}
+	// 2. Exact keyword match in inlineName for Hidden Cubes / Chests (Original working logic - DO NOT ALTER)
+	lower := strings.ToLower(inlineName)
+	if lower != "" {
+		if strings.Contains(lower, "cube") || strings.Contains(lower, "cubo") ||
+			strings.Contains(lower, "hidden") || strings.Contains(lower, "oculto") ||
+			strings.Contains(lower, "chest") || strings.Contains(lower, "supply") ||
+			strings.Contains(lower, "cofre") || strings.Contains(lower, "suministro") ||
+			strings.Contains(lower, "treasure") || strings.Contains(lower, "tesoro") ||
+			strings.Contains(lower, "relic") || strings.Contains(lower, "box") ||
+			strings.Contains(lower, "caja") || strings.Contains(lower, "큐브") ||
+			strings.Contains(lower, "상자") || strings.Contains(lower, "보급") {
+			return inlineName, radarCategoryChest, true
+		}
+	}
+	// 3. Direct catalog lookup for confirmed Gathering / Resource nodes
 	if def, ok := radarCatalog[code]; ok {
 		name := def.Name
 		if inlineName != "" {
@@ -402,20 +485,9 @@ func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, r
 		}
 		return name, def.Category, true
 	}
-	// 2. Exact keyword match in inlineName for Cubes and Gathering Nodes
-	lower := strings.ToLower(inlineName)
+	// 4. Exact keyword match in inlineName for gathering professions
 	if lower != "" {
 		switch {
-		case strings.Contains(lower, "cube") || strings.Contains(lower, "cubo") ||
-			strings.Contains(lower, "hidden") || strings.Contains(lower, "oculto") ||
-			strings.Contains(lower, "chest") || strings.Contains(lower, "supply") ||
-			strings.Contains(lower, "cofre") || strings.Contains(lower, "suministro") ||
-			strings.Contains(lower, "treasure") || strings.Contains(lower, "tesoro") ||
-			strings.Contains(lower, "relic") || strings.Contains(lower, "box") ||
-			strings.Contains(lower, "caja") || strings.Contains(lower, "큐브") ||
-			strings.Contains(lower, "상자") || strings.Contains(lower, "보급"):
-			return inlineName, radarCategoryChest, true
-
 		case strings.Contains(lower, "orichalcum") || strings.Contains(lower, "ore") ||
 			strings.Contains(lower, "vein") || strings.Contains(lower, "mineral") ||
 			strings.Contains(lower, "oricalco") || strings.Contains(lower, "광석") ||
@@ -426,57 +498,55 @@ func classifyRadarTarget(code uint32, mask uint32, inlineName string) (string, r
 			return inlineName, radarCategoryOre, true
 
 		case strings.Contains(lower, "herb") || strings.Contains(lower, "azpha") ||
-			strings.Contains(lower, "calendula") || strings.Contains(lower, "aria") ||
+			strings.Contains(lower, "azfa") || strings.Contains(lower, "calendula") ||
+			strings.Contains(lower, "caléndula") || strings.Contains(lower, "aria") ||
 			strings.Contains(lower, "targena") || strings.Contains(lower, "pujery") ||
 			strings.Contains(lower, "conide") || strings.Contains(lower, "ohkra") ||
 			strings.Contains(lower, "morfa") || strings.Contains(lower, "raydam") ||
 			strings.Contains(lower, "mela") || strings.Contains(lower, "coriolus") ||
-			strings.Contains(lower, "inina") || strings.Contains(lower, "cypri") ||
+			strings.Contains(lower, "coriolo") || strings.Contains(lower, "inina") ||
+			strings.Contains(lower, "cypri") || strings.Contains(lower, "chipriota") ||
 			strings.Contains(lower, "kukuru") || strings.Contains(lower, "hierba") ||
-			strings.Contains(lower, "plant") || strings.Contains(lower, "약초"):
+			strings.Contains(lower, "plant") || strings.Contains(lower, "planta") ||
+			strings.Contains(lower, "약초"):
 			return inlineName, radarCategoryHerb, true
 
 		case strings.Contains(lower, "sapphire") || strings.Contains(lower, "ruby") ||
-			strings.Contains(lower, "diamond") || strings.Contains(lower, "gem") ||
-			strings.Contains(lower, "tourmaline") || strings.Contains(lower, "jewel") ||
-			strings.Contains(lower, "zafiro") || strings.Contains(lower, "rubí") ||
+			strings.Contains(lower, "rubí") || strings.Contains(lower, "diamond") ||
+			strings.Contains(lower, "gem") || strings.Contains(lower, "tourmaline") ||
+			strings.Contains(lower, "turmalina") || strings.Contains(lower, "jewel") ||
+			strings.Contains(lower, "joya") || strings.Contains(lower, "zafiro") ||
 			strings.Contains(lower, "diamante") || strings.Contains(lower, "gema") ||
-			strings.Contains(lower, "amethyst") || strings.Contains(lower, "topaz") ||
+			strings.Contains(lower, "amethyst") || strings.Contains(lower, "amatista") ||
+			strings.Contains(lower, "topaz") || strings.Contains(lower, "topacio") ||
 			strings.Contains(lower, "esmeralda") || strings.Contains(lower, "emerald") ||
 			strings.Contains(lower, "보석"):
 			return inlineName, radarCategoryGem, true
 
 		case strings.Contains(lower, "log") || strings.Contains(lower, "asvata") ||
 			strings.Contains(lower, "yggdrasil") || strings.Contains(lower, "tree") ||
+			strings.Contains(lower, "árbol") || strings.Contains(lower, "arbol") ||
 			strings.Contains(lower, "wood") || strings.Contains(lower, "tronco") ||
-			strings.Contains(lower, "madera") || strings.Contains(lower, "teak") ||
-			strings.Contains(lower, "sissoo") || strings.Contains(lower, "willow") ||
-			strings.Contains(lower, "oak") || strings.Contains(lower, "목재"):
+			strings.Contains(lower, "madera") || strings.Contains(lower, "registro") ||
+			strings.Contains(lower, "teak") || strings.Contains(lower, "sissoo") ||
+			strings.Contains(lower, "willow") || strings.Contains(lower, "oak") ||
+			strings.Contains(lower, "roble") || strings.Contains(lower, "목재"):
 			return inlineName, radarCategoryWood, true
 
 		case strings.Contains(lower, "odyle") || strings.Contains(lower, "odylium") ||
 			strings.Contains(lower, "odil") || strings.Contains(lower, "aether") ||
+			strings.Contains(lower, "éter") || strings.Contains(lower, "eter") ||
 			strings.Contains(lower, "crystal") || strings.Contains(lower, "cristal") ||
 			strings.Contains(lower, "오드"):
 			return inlineName, radarCategoryOdyle, true
 		}
 	}
-	// 3. Template ID prefix ranges from Aion 2 client database
+	// 5. Template ID prefix ranges from Aion 2 client database
 	if name, cat, ok := classifyByTemplateRange(code); ok {
 		if inlineName != "" {
 			return inlineName, cat, true
 		}
 		return name, cat, true
-	}
-	// 4. Object gadget kind detection for 0x3634 (World Object)
-	// Gadget kind 4/5/6/7 = Gathering node; kind 1/2/4 = Chest/Cube
-	if mask >= 1 && mask <= 10 {
-		if code >= 1000000 && code <= 1499999 {
-			return "Hidden Cube", radarCategoryChest, true
-		}
-		if code >= 3680000 && code <= 3689999 {
-			return "Special Hidden Cube", radarCategoryChest, true
-		}
 	}
 	// Any non-catalog NPC, monster or decorative object is ignored to prevent clutter
 	return "", "", false
@@ -741,9 +811,9 @@ func (e *encounter) observeRadar(m aMessage, self game.Entity) {
 		if id, rest, ok := readVar(m.payload); ok && id != 0 && len(rest) >= 5+18 {
 			offset := 5
 			npcID := binary.LittleEndian.Uint32(rest[offset : offset+4])
-			if name, _, ok := classifyRadarTarget(npcID, 0, ""); ok {
+			if def, found := radarCatalog[npcID]; found && def.Category == radarCategoryChest {
 				if pos, valid := readVec3LE(rest[offset+6 : offset+18]); valid {
-					e.radar.upsertEntity(m.t, game.Entity(id), npcID, 0, name, pos)
+					e.radar.upsertEntity(m.t, game.Entity(id), npcID, 0, def.Name, pos)
 				}
 			}
 		}

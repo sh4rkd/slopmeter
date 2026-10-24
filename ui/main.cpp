@@ -236,11 +236,11 @@ public:
     void setRadarSubmenu(const QString &val) {if(radarSubmenuSetting==val) return;radarSubmenuSetting=val;emit radarSubmenuChanged();}
     Q_INVOKABLE QStringList radarSubItemsFor(const QString &catKey) const {
         QStringList items;
-        if(catKey=="gem") items = {"Sapphire Gemstone", "Diamond Gemstone", "Ruby Gemstone", "Floating Tourmaline", "Veil Jewel"};
-        else if(catKey=="ore") items = {"Orichalcum Ore", "Iron Ore", "Titanium Ore", "Adamantium Ore", "Mithril"};
-        else if(catKey=="herb") items = {"Aria", "Targena", "Azpha", "Calendula", "Mela", "Coriolus", "Inina", "Cypri", "Kukuru", "Raydam", "Morfa", "Conide", "Pujery", "Ohkra"};
-        else if(catKey=="wood") items = {"Asvata Log", "Yggdrasil Log"};
-        else if(catKey=="odyle") items = {"Odyle", "Odylium Ore", "Crystal"};
+        if(catKey=="gem") items = {"Zafiro / Sapphire", "Diamante / Diamond", "Rubí / Ruby", "Turmalina / Tourmaline", "Joya / Jewel"};
+        else if(catKey=="ore") items = {"Oricalco / Orichalcum", "Hierro / Iron", "Titanio / Titanium", "Adamantio / Adamantium", "Mithril"};
+        else if(catKey=="herb") items = {"Azfa / Azpha", "Caléndula / Calendula", "Aria", "Targena", "Coriolo / Coriolus", "Mela", "Inina", "Chipriota / Cypri", "Kukuru", "Raydam", "Morfa", "Conide", "Pujery", "Ohkra"};
+        else if(catKey=="wood") items = {"Yggdrasil", "Asvata"};
+        else if(catKey=="odyle") items = {"Odyle", "Odylium", "Cristal / Crystal"};
         else if(catKey=="chest") items = {"Hidden Cube", "Supply Chest", "Treasure Chest"};
 
         for(const auto &v : radarRows) {
@@ -255,13 +255,24 @@ public:
         return items;
     }
     Q_INVOKABLE void selectOnlyProfession(const QString &profKey) {
-        setRadarChests(profKey == "chest");
-        setRadarOdyle(profKey == "odyle");
-        setRadarGems(profKey == "gem");
-        setRadarOres(profKey == "ore");
-        setRadarHerbs(profKey == "herb");
-        setRadarWood(profKey == "wood");
-        setRadarOther(profKey == "other");
+        if(profKey == "chest") {
+            setRadarChests(true);
+            setRadarOdyle(false);
+            setRadarGems(false);
+            setRadarOres(false);
+            setRadarHerbs(false);
+            setRadarWood(false);
+            setRadarOther(false);
+        } else {
+            // Keep radarChests true so cubes are NEVER silenced or hidden!
+            setRadarChests(true);
+            setRadarOdyle(profKey == "odyle");
+            setRadarGems(profKey == "gem");
+            setRadarOres(profKey == "ore");
+            setRadarHerbs(profKey == "herb");
+            setRadarWood(profKey == "wood");
+            setRadarOther(profKey == "other");
+        }
         setRadarItemFilter(QString());
         setRadarSubmenu(profKey);
         emit radarChanged();
@@ -1215,7 +1226,7 @@ public:
     void notifyNewCubes() {
         QSet<qint64> current;
         bool fresh=false;
-        for(const auto &val:displayRadar()) {
+        for(const auto &val:radarRows) {
             const auto m=val.toMap();
             if(m.value("category").toString()!="chest") continue;
             const qint64 id=m.value("id").toLongLong();
@@ -1248,15 +1259,27 @@ public:
             if(!catMatch) continue;
             if(!radarItemFilterSetting.isEmpty()) {
                 const QString targetFilter = radarItemFilterSetting.trimmed();
-                bool matches = name.contains(targetFilter, Qt::CaseInsensitive);
-                if(!matches) {
-                    QString cleanFilter = targetFilter;
-                    cleanFilter.remove(" Ore", Qt::CaseInsensitive);
-                    cleanFilter.remove(" Gemstone", Qt::CaseInsensitive);
-                    cleanFilter.remove(" Log", Qt::CaseInsensitive);
-                    cleanFilter = cleanFilter.trimmed();
-                    if(!cleanFilter.isEmpty() && name.contains(cleanFilter, Qt::CaseInsensitive)) {
+                bool matches = false;
+                const QStringList parts = targetFilter.split('/', Qt::SkipEmptyParts);
+                for(const QString &p : parts) {
+                    QString clean = p.trimmed();
+                    if(clean.isEmpty()) continue;
+                    if(name.contains(clean, Qt::CaseInsensitive)) {
                         matches = true;
+                        break;
+                    }
+                    clean.remove(" Ore", Qt::CaseInsensitive);
+                    clean.remove(" Gemstone", Qt::CaseInsensitive);
+                    clean.remove(" Log", Qt::CaseInsensitive);
+                    clean.remove(" Mineral", Qt::CaseInsensitive);
+                    clean.remove(" Hierba", Qt::CaseInsensitive);
+                    clean.remove(" Piedra preciosa", Qt::CaseInsensitive);
+                    clean.remove(" Tronco", Qt::CaseInsensitive);
+                    clean.remove(" Registro", Qt::CaseInsensitive);
+                    clean = clean.trimmed();
+                    if(!clean.isEmpty() && name.contains(clean, Qt::CaseInsensitive)) {
+                        matches = true;
+                        break;
                     }
                 }
                 if(!matches) continue;
